@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/zepenglyu/login system/src/server/server'
+relocations:     []
+...
