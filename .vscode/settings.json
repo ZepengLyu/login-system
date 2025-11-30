@@ -1,0 +1,34 @@
+{
+    "files.associations": {
+        "core_names.h": "c",
+        "array": "c",
+        "span": "c",
+        "string": "c",
+        "string_view": "c",
+        "vector": "c",
+        "*.inc": "c",
+        "config.h": "c",
+        "curl.h": "c",
+        "err.h": "c",
+        "message_type.h": "c",
+        "stdlib.h": "c",
+        "mysql.h": "c",
+        "client_functions.h": "c",
+        "string.h": "c",
+        "rand.h": "c",
+        "server_functions.h": "c",
+        "common.h": "c",
+        "database.h": "c",
+        "evp.h": "c",
+        "ssl.h": "c",
+        "bitset": "c",
+        "crypto.h": "c",
+        "email.h": "c",
+        "client_api.h": "c",
+        "sstream": "c",
+        "__locale": "c",
+        "locale": "c",
+        "server_api.h": "c"
+    }
+   
+}

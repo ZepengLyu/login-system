@@ -1,0 +1,9 @@
+/pem/
+.DS_Store
+*dSYM/
+*.exe
+*.dll
+*.so
+*.dylib
+/libs/
+.vscode/

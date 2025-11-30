@@ -1,16 +1,28 @@
 # include <string.h>
+#ifdef _WIN32 /* Windows */
+# include <stdarg.h>
+# include <winsock2.h>
+#else /* Linux/Unix */
 # include <err.h>
 # include <sys/socket.h>
 # include <sys/select.h>
+#endif
+# include <openssl/bio.h>
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+# include <openssl/pem.h>
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
- 
+// #include "server_functions"
+
+
 static const char cache_id[] = "OpenSSL Demo Server";
 
-int main(int argc, char *argv[])        // 需要两个参数 filename,port
+
+int main(int argc, char *argv[]) 
 {
+    /*  argv: filename, port  */
+ # pragma region 与外部端口连接
+
     int res = EXIT_FAILURE;
     long opts;
     const char *hostport;
@@ -18,50 +30,59 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
     SSL_CTX *ctx = NULL;
     BIO *acceptor_bio;
 
-    // arguments validation
+    // Validate arguments
     if (argc != 2)                                                                         
         errx(res, "Usage: %s [host:]port", argv[0]);
     hostport = argv[1];
 
-    // SSL Ctx setting
+    // Set SSL ctx
     ctx = SSL_CTX_new(TLS_server_method());
     if (ctx == NULL) {
         ERR_print_errors_fp(stderr);
         errx(res, "Failed to create server SSL_CTX");
     }
 
-    // SSL version setting
+    // Set SSL version 
     if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
         SSL_CTX_free(ctx);
         ERR_print_errors_fp(stderr);
         errx(res, "Failed to set the minimum TLS protocol version");
     }
- 
-    // SSL security level setting
+
+    // Set SSL security level 
     SSL_CTX_set_security_level(ctx, 2);  
     
-    // Server Tls connection setting
+    // Set Server TlS connection 
     opts = SSL_OP_IGNORE_UNEXPECTED_EOF;
     opts |= SSL_OP_NO_RENEGOTIATION; 
     opts |= SSL_OP_CIPHER_SERVER_PREFERENCE;
     SSL_CTX_set_options(ctx, opts);
  
-    // Cert and privata key setting
-    const char chain_file[]= "../pem/cert/Chain.pem";
-    if (SSL_CTX_use_certificate_chain_file(ctx, &chain_file) <= 0) {
+
+    // Set cert and private key
+    char chain_file[]= "./pem/chain.pem";
+    if (SSL_CTX_use_certificate_chain_file(ctx, chain_file) <= 0) {
         SSL_CTX_free(ctx);
         ERR_print_errors_fp(stderr);
         errx(res, "Failed to load the server certificate chain file");
     }
-    const char key_file[]= "../pem/key/server_key.pem";
-    if (SSL_CTX_use_PrivateKey_file(ctx, &key_file, SSL_FILETYPE_PEM) <= 0) {
+
+
+
+    char key_file[]= "./pem/server_key.pem";
+
+    if (SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
         SSL_CTX_free(ctx);
         ERR_print_errors_fp(stderr);
         errx(res, "Error loading the server private key file, "
                 "possible key/cert mismatch???");
     }
 
-    // Session ctx setting
+    
+
+    
+
+    // Set Session ctx 
     SSL_CTX_set_session_id_context(ctx, (void *)cache_id, sizeof(cache_id));
     SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
 
@@ -70,7 +91,7 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 
 
-    // Create a listener socket wrapped in a BIO.
+    // Create a listener socket wrapped in a BIO.  
     acceptor_bio = BIO_new_accept(hostport);
     if (acceptor_bio == NULL) {
         SSL_CTX_free(ctx);
@@ -79,12 +100,44 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
     }
 
     // The first call to BIO_do_accept() initialises the socket
-    BIO_set_bind_mode(acceptor_bio, BIO_BIND_REUSEADDR);                                   
+    BIO_set_bind_mode(acceptor_bio, BIO_BIND_REUSEADDR);    // 这里是建立并发服务器的关键                                
     if (BIO_do_accept(acceptor_bio) <= 0) {
         SSL_CTX_free(ctx);
         ERR_print_errors_fp(stderr);
         errx(res, "Error setting up acceptor socket");
     }
+
+ # pragma endregion 
+    
+ # pragma region functions
+    // EVP_PKEY * encap_pkeys=NULL;
+    // generate_encapkeys(&encap_pkeys);
+
+    // const *private_key_file="./pem/server_key.pem";
+
+    // BIO * file_bio=BIO_new_file(&private_key_file,"r");
+
+    // EVP_PKEY * private_key=PEM_read_bio_PrivateKey(file_bio,NULL,NULL,NULL);
+
+    // X509 *pubkey_x509 = X509_new();
+    // sign2pubkey(private_key,encap_pkeys,pubkey_x509);
+
+    // char * x509_string=NULL;
+    // int len=i2d_X509(pubkey_x509,&x509_string);
+
+    // SSL_write(ssl,x509_string,len);
+
+ 
+    // generate_serverkey();   
+    // sign2pubkey();
+    // printf("A");
+
+ # pragma endregion
+    
+ # pragma region 与内部端口连接
+    
+ # pragma endregion
+
 
     /* Wait for incoming connection */
     for (;;) {
@@ -109,7 +162,7 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
         }
 
         /* Pop the client connection from the BIO chain */
-        client_bio = BIO_pop(acceptor_bio);
+        client_bio = BIO_pop(acceptor_bio);                 // 这里是服务器并行需要修改的地方
         fprintf(stderr, "New client connection accepted\n");
 
         /* Associate a new SSL handle with the new connection */
@@ -119,6 +172,7 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
             BIO_free(client_bio);
             continue;
         }
+        
         SSL_set_bio(ssl, client_bio, client_bio);
 
         /* Attempt an SSL handshake with the client */
@@ -129,11 +183,11 @@ int main(int argc, char *argv[])        // 需要两个参数 filename,port
             continue;
         }
 
-        // ZKP Process
+        // // ZKP Process
 
-        SSL_read_ex(ssl, buf, sizeof(buf), &nread);
+        // SSL_read_ex(ssl, buf, sizeof(buf), &nread);
         
-        fwrite(buf, 1, nread, stdout); 
+        // fwrite(buf, 1, nread, stdout); 
         // this is client hello message
         // operation: register, login, update information, change password   
         // 

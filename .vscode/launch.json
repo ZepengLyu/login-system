@@ -1,0 +1,59 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "调试 test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask":"生成 test"
+        },
+        {
+            "name": "调试 basic function test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/functions_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask":"生成 basic function test"
+        },
+        {
+            "name": "调试 server",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/server/server",
+            "args": ["4443"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask":"生成 server"
+        },
+        {
+            "name": "调试 client",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/client/client",
+            "args": ["localhost","4443"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask":"生成 client"
+        },
+        
+       
+    ]
+}
