@@ -9,11 +9,12 @@
 # include "./common.h"
 
 
-int import_privatekey(EVP_PKEY ** pkey_pp, const char * privatekey_file){
-
+int import_privatekey(EVP_PKEY ** pkey_pp,const char * privatekey_file){
+    
     FILE * fp = fopen(privatekey_file, "r");
     if (fp == NULL) {
         fprintf(stderr, "Unable to open private key file: %s\n", privatekey_file);
+        perror("fail reason");
         return 1;
     }
 
@@ -31,9 +32,9 @@ int import_privatekey(EVP_PKEY ** pkey_pp, const char * privatekey_file){
 }
 
 
-int generate_keypair(const char ** ret_pubkey_pp, size_t * ret_pubkey_size_pp, const char * privatekey_file){
+int generate_keypair(const char ** ret_pubkey_pp, const char * privatekey_file){
 
-    unsigned char * pubkey;    size_t pubkey_size;
+    char * pubkey;    size_t pubkey_size;
 
     // generate key pair 
     EVP_PKEY * pkey = EVP_PKEY_Q_keygen(NULL, NULL, "ML-DSA-44");
@@ -45,19 +46,27 @@ int generate_keypair(const char ** ret_pubkey_pp, size_t * ret_pubkey_size_pp, c
 
     // save private key
     FILE *fp = fopen(privatekey_file, "w");
+    if (fp==NULL){
+        fclose(fp);
+        perror("fail reason");
+        fprintf(stderr,"%s: open file %s fail: %s\n",__func__, privatekey_file);
+        return -1;
+    }
     PEM_write_PrivateKey(fp,pkey,NULL,NULL,0,NULL,NULL);
 
     fclose(fp);
     EVP_PKEY_free(pkey);
- 
-    uint8_to_hex(pubkey, pubkey_size, ret_pubkey_pp, ret_pubkey_size_pp);
-   
+    size_t ret_pubkey_size_pp;
+    uint8_to_hex(pubkey, pubkey_size, ret_pubkey_pp, &ret_pubkey_size_pp);
+    
     return 0;
 }
 
 
-int sign_message(const unsigned char * message, size_t message_size, const unsigned char **signature_pp, size_t *signature_size_p, EVP_PKEY *pkey)
-{
+int sign_message(const char * message, const char **signature_pp, EVP_PKEY *pkey)
+{   
+    size_t message_size= strlen(message);
+    
     // set sign configuration
     EVP_PKEY_CTX *sctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
     EVP_SIGNATURE *sig_alg = EVP_SIGNATURE_fetch(NULL, "ML-DSA-44", NULL);
@@ -70,7 +79,11 @@ int sign_message(const unsigned char * message, size_t message_size, const unsig
     sig = OPENSSL_zalloc(sig_len);
     EVP_PKEY_sign(sctx, sig, &sig_len, message, message_size);
     
-    uint8_to_hex(sig,sig_len,signature_pp,signature_size_p);
+    size_t signature_size;
+    const char * signature;
+    uint8_to_hex(sig,sig_len,&signature,&signature_size);
+
+    *signature_pp=append_character(signature,signature_size,'\0');
 
     // free the ctx and alg
     EVP_SIGNATURE_free(sig_alg);
@@ -78,17 +91,15 @@ int sign_message(const unsigned char * message, size_t message_size, const unsig
     return 0;
 }
 
-int validate_signature(const char * message, size_t message_size, 
-    const char * signature, size_t signature_size, 
-    EVP_PKEY * pubkey){
+int validate_signature(const char * message, const char * signature, EVP_PKEY * pubkey){
 
     const unsigned char * _message;
     size_t _message_size;
-    hex_to_uint8(message,message_size,&_message,&_message_size);
+    hex_to_uint8(message,strlen(message),&_message,&_message_size);
 
     const unsigned char * _signature;
     size_t _signature_size;
-    hex_to_uint8(signature,signature_size,&_signature,&_signature_size);
+    hex_to_uint8(signature,strlen(signature),&_signature,&_signature_size);
 
     
     EVP_MD_CTX * ctx = EVP_MD_CTX_new();
@@ -107,18 +118,32 @@ int validate_signature(const char * message, size_t message_size,
 
 
 // 随机数生成函数
-const unsigned char * generate_session_id(){
+// 无 '/0' 版本
+// const unsigned char * generate_session_id(){
+//     size_t session_id_size=SESSION_ID_SIZE;
+//     unsigned char * session_id=OPENSSL_zalloc(session_id_size);
+//     RAND_bytes(session_id,session_id_size);
+
+//     char * ret_session_id;
+//     size_t ret_session_id_size;
+//     uint8_to_hex(session_id,session_id_size,&ret_session_id,&ret_session_id_size);
+//     return ret_session_id ;
+// }
+
+// 有 '/0' 版本
+const char * generate_session_id(){
     size_t session_id_size=SESSION_ID_SIZE;
     unsigned char * session_id=OPENSSL_zalloc(session_id_size);
     RAND_bytes(session_id,session_id_size);
 
-    char * ret_session_id;
-    size_t ret_session_id_size;
-    uint8_to_hex(session_id,session_id_size,&ret_session_id,&ret_session_id_size);
-    return ret_session_id ;
+    char * hex_session_id;
+    size_t hex_session_id_size;
+    uint8_to_hex(session_id,session_id_size,&hex_session_id,&hex_session_id_size);
+    
+    return append_character(hex_session_id,hex_session_id_size,'\0');
 }
 
-const unsigned char * generate_token(){
+const char * generate_token(){
     size_t token_size=TOKEN_SIZE;
     unsigned char * token=(unsigned char *)OPENSSL_zalloc(token_size);
     RAND_bytes(token,token_size);
@@ -126,11 +151,10 @@ const unsigned char * generate_token(){
     char * ret_token;
     size_t ret_token_size;
     uint8_to_hex(token,token_size,&ret_token,&ret_token_size);
-
-    return ret_token;
+    return append_character(ret_token,ret_token_size,'\0');
 }
 
-const unsigned char * generate_change_factor_token(){
+const char * generate_email_token(){
     size_t token_size=CHANGE_FACTOR_TOKEN_SIZE;
     unsigned char * token=(unsigned char *)OPENSSL_zalloc(token_size);
     RAND_bytes(token,token_size);
@@ -139,10 +163,10 @@ const unsigned char * generate_change_factor_token(){
     size_t ret_token_size;
     uint8_to_hex(token,token_size,&ret_token,&ret_token_size);
 
-    return ret_token;
+    return append_character(ret_token,ret_token_size,'\0');
 }
 
-const unsigned char * generate_challenge(){
+const char * generate_challenge(){
     size_t challenge_size=CHALLENGE_SIZE;
     unsigned char * challenge=(unsigned char *)OPENSSL_zalloc(challenge_size);
     RAND_bytes(challenge,challenge_size);
@@ -151,7 +175,7 @@ const unsigned char * generate_challenge(){
     size_t ret_challenge_size;
     uint8_to_hex(challenge,challenge_size,&ret_challenge, &ret_challenge_size);
 
-    return ret_challenge;
+    return append_character(ret_challenge,ret_challenge_size,'\0');
 }
 
 

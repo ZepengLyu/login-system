@@ -1,3 +1,4 @@
+/bin/
 /pem/
 .DS_Store
 *dSYM/
@@ -10,3 +11,4 @@
 /*
 !*/
 !*.*
+!makefile

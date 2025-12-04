@@ -1,226 +1,135 @@
 # ifndef CLIENT_API_H
 # define CLIENT_API_H
-# include "./client_functions.h"
+# include "./client_functions/client_register.h"
+# include "./client_functions/client_login.h"
+# include "./client_functions/client_query.h"
+# include "./client_functions/client_update.h"
+# include "./client_functions/client_change_factor.h"
 
 
-int register_request(SSL * ssl, 
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, size_t username_size,
-    const char *email,size_t email_size,
-    const char * privatekey_file){   
+command_t listen_client_command(){
+    char command[COMMAND_MAX_SIZE];
+    printf("请输入您要进行的操作，可允许的操作包括 register, login, query, update, change factor");
+    scanf("%d", &command);
+    command_t command_type=get_command_type(command);
+    return command_type;
+}
+
+/* 用户进行注册 */
+int client_register(SSL * ssl, const char * session_id){
+    const char * privatekey_file=CLIENT_PRIVATEKEY_FILE;
+
+    /* 获得用户信息 */
+    // char user_name[USERNAME_MAX_SIZE];
+    printf("请输入想要注册的用户名");
+    const char *user_name="jack";
+    // scanf("%s", &user_name);
+
+    // char email[EMAIL_MAX_SIZE];
+    const char *email="lyuzepeng.app@gmail.com";
+    printf("请输入想要注册的邮箱");
+    // scanf("%s", &email);
+
+    /* 发送注册请求 */
+    register_request(ssl, session_id, user_name, email, privatekey_file);
+
+    /* 等待服务器允许注册回复*/
+    int allowed_res=listen_register_permission_feedback(ssl, session_id, user_name);
+
+    if (allowed_res==0){  
+        /* user_name 被允许注册 */
+        // 获得 email token
+        char email_token[EMAIL_TOKEN_MAX_SIZE];
+        printf("请输入邮箱收到的 TOKEN");
+        scanf("%s", &email_token);
     
-    const unsigned char *pubkey; size_t pubkey_size;
-    generate_keypair(&pubkey,&pubkey_size,privatekey_file);     
+        register_token_request(ssl, session_id, user_name, email_token);
 
-    register_request_t * register_request=create_register_request(session_id, session_id_size,
-        user_name, username_size, email, email_size, pubkey, pubkey_size);
+        // 等待 server acknowledge register 回复
+        const char * message;
+        int ack_res=listen_register_result_feedback(ssl,session_id,user_name);
 
-    const unsigned char * message; size_t message_size;
-    create_register_request_message(&message,&message_size,register_request);
-
-    SSL_write(ssl,message,message_size);
-
-    return 0;
-}
-
-
-
-
-int login_request(SSL *ssl, const unsigned char * session_id, size_t session_id_size,
-    const char * user_name,size_t username_size)
-{   
-    login_request_t * login_request=create_login_request(session_id, session_id_size,
-        user_name,username_size);
-
-    const unsigned char * message; size_t message_size;
-    create_login_request_message(&message,&message_size,login_request);
-
-    SSL_write(ssl,message,message_size);
-    return 0;
-}
-
-
-
-int response_challenge(SSL * ssl, 
-    const unsigned char * session_id, size_t session_id_size, const char * user_name,size_t username_size,
-    const unsigned char * buf, size_t buf_size, EVP_PKEY * pkey)
-{
-    
-    // parse challenge_text
-    challenge_feedback_t * challenge_feedback=parse_challenge_feedback(buf,buf_size);
-    
-    int check_res=check_challenge_feedback(challenge_feedback, session_id, session_id_size, user_name, username_size);
-    
-    if (check_res!=0){
-        fprintf(stderr,"challenge feedback check fails");
-        return 1;
-    }
-    // sign challenge
-    const unsigned char * signature;    size_t signature_size;
-    sign_message(challenge_feedback->challenge, challenge_feedback->challenge_size, &signature, &signature_size, pkey);
-    
-    // get response_request
-    response_request_t * response_request=create_response_request(challenge_feedback,signature,signature_size);
-
-    // get response_text
-    unsigned char * message;    size_t message_size;
-    create_response_request_message(&message, &message_size, response_request);
-    
-    SSL_write(ssl,message,message_size);
-
-    return 0;
-}
-
-
-int get_token(const unsigned char * buf, size_t buf_size,
-    const unsigned char ** token_pp, size_t * token_size_p,
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, size_t username_size){
-
-    token_feedback_t * token_feedback = parse_token_feedback(buf, buf_size);
-
-    int check_res=check_token(token_feedback, session_id, session_id_size, user_name, username_size);
-    if (check_res!=0){
-        fprintf(stderr,"token feedback check fails");
-
-        return 1;
-    }
-
-    *token_pp=token_feedback->token;
-    *token_size_p=token_feedback->token_size;
-
-    return 0;
-}
-
-
-int update_request(SSL *ssl, 
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, 
-    const char * data,
-    const unsigned char * token, size_t token_size){
-
-    update_request_t * update_request=create_update_request(session_id,session_id_size,
-        user_name,strlen(user_name),data,strlen(data),
-        token,token_size);    
-
-    const unsigned char * message;    size_t message_size;
-    create_update_request_message(&message,&message_size,update_request);
-
-    SSL_write(ssl,message,message_size);
-}
-
-int query_request(SSL *ssl, 
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, 
-    const unsigned char * token, size_t token_size){
-
-    query_request_t * update_request=create_query_request(session_id,session_id_size,
-        user_name,strlen(user_name),
-        token,token_size);    
-
-    const unsigned char * message;    size_t message_size;
-    create_query_request_message(&message,&message_size,update_request);
-
-    SSL_write(ssl,message,message_size);
-}
-
-
-int change_factor_request(SSL * ssl,
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, size_t username_size){
-
-    change_factor_request_t * change_factor_request=create_change_factor_request(
-        session_id, session_id_size,
-        user_name, username_size
-    );
-
-    const unsigned char * message; size_t message_size;
-    create_change_factor_request_message(&message,&message_size,change_factor_request);
-
-    SSL_write(ssl,message,message_size);
-    return 0;
-}
-
-
-int change_factor_token_request(SSL * ssl,
-    const unsigned char * session_id, size_t session_id_size,
-    const char * user_name, size_t username_size,
-    const unsigned char * new_pubkey, size_t new_pubkey_size,
-    const unsigned char * token, size_t token_size){
-
-    change_factor_token_request_t * change_factor_token_request=create_change_factor_token_request(
-        session_id, session_id_size,
-        user_name, username_size,
-        new_pubkey,new_pubkey_size,
-        token, token_size);     
-
-    const unsigned char * message; size_t message_size;
-    create_change_factor_token_request_message(&message,&message_size,change_factor_token_request);
-    SSL_write(ssl,message,message_size);
-    return 0;
-
-}
-
-// print feedback
-int print_feedback(const unsigned char * buf,size_t buf_size){
-    general_feedback_t * feedback_data={0};
-    get_with_va(buf,buf_size,3,
-        &feedback_data->session_id, &feedback_data->session_id_size,
-        &feedback_data->user_name, &feedback_data->username_size,
-        &feedback_data->message, &feedback_data->message_size
-    );
-    append_character(feedback_data->message,feedback_data->message_size,'\0');
-    fprintf(stderr,"%s",feedback_data->message);
-    return 0;
-}
-
- 
-int client_listen(SSL * ssl,const char * user_name, size_t user_name_size, char * pkey_file){
-
-    unsigned char buf[BUFFER_MAX_SIZE];
-    size_t buf_size; //real buffer size
-   
-    // import pkey
-    FILE* fp=fopen(pkey_file,"r");
-    EVP_PKEY * pkey;
-    import_privatekey(&pkey,fp);
-
-
-    // session id
-    const unsigned char * session_id=generate_session_id();
-    size_t session_id_size=SESSION_ID_SIZE;
-
-    // token
-    const unsigned char * token;
-    size_t token_size=TOKEN_SIZE;
-
-
-    while (SSL_read(ssl,buf,buf_size)>0 ){
-        
-        unsigned char message_type=buf[0];
-        
-        switch(message_type){
-            case CHALLENGE_TYPE:
-                response_challenge(ssl,
-                session_id,session_id_size,
-                user_name,user_name_size,    
-                (const unsigned char *)buf,buf_size,pkey);
-                break;
-            case FEEDBACK_TYPE:
-                print_feedback((const unsigned char *)buf,buf_size);
-                break;
-            case TOKEN_TYPE:   
-                get_token(buf,buf_size,
-                    &token,&token_size,
-                    session_id,session_id_size,
-                    user_name,user_name_size);
-                break;
-            default:
-                fprintf(stderr,"unknown message type");
-                break;
+        if (ack_res==0){ //注册成功
+            return 0; 
         }
-
+        else{                   // 注册失败
+            printf(message);     // 输出错误信息
+            return 1;       
+        }
     }
-    return 0;
+    else{
+        /* user_name 不被允许注册 */
+        return 1;
+    }
 }
+
+/* 用户进行登陆*/
+int client_login(SSL * ssl, const char * session_id, const char ** token_pp){
+
+    const char * privatekey_file=CLIENT_PRIVATEKEY_FILE;
+
+    /* 获得用户信息 */
+    char user_name[USERNAME_MAX_SIZE];
+    printf("请输入想要登陆的用户名");
+    scanf("%s", &user_name);
+
+    /* 发送登陆请求 */
+    login_request(ssl, session_id, user_name);
+
+    
+}
+
+/* 用户进行查询*/
+int client_query(SSL * ssl, const char * session_id, const char * token){
+
+
+}
+
+/* 用户进行更新*/
+int client_update(SSL * ssl, const char * session_id, const char * token){
+}
+
+/* 用户更改 factor */
+int client_change_factor(SSL * ssl, const char * session_id){
+}
+
+
+/* main */
+int client_request(SSL *ssl){
+
+    const char * session_id;
+    session_id=generate_session_id();
+    char * user_name=OPENSSL_zalloc(USERNAME_MAX_SIZE);
+    size_t token_size=HEX_TOKEN_SIZE;
+    const char *token=OPENSSL_zalloc(token_size+1);
+
+    while (true){
+        
+        // user command
+        command_t command_type=listen_client_command();
+        command_type=CMD_REGISTER;
+        switch(command_type){
+            case CMD_REGISTER:               
+                client_register(ssl,session_id);
+                break;
+            case CMD_LOGIN:
+                client_login(ssl,session_id,&token);
+                break;
+            case CMD_QUERY:
+                client_query(ssl,session_id,token);
+                break;
+            case CMD_UPDATE:
+                client_update(ssl,session_id,token);
+                break;
+            case CMD_CHANGE_FACTOR:
+                client_change_factor(ssl,session_id);
+                break;
+            case CMD_OTHER:
+                fprintf(stderr,"Unrecognized Command");
+                break;
+
+        }
+    }
+}
+
 # endif

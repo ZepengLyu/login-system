@@ -1,5 +1,5 @@
 ---
 triple:          'arm64-apple-darwin'
-binary-path:     '/Users/zepenglyu/login system/test/functions_test'
+binary-path:     '/Users/zepenglyu/login_system/test/functions_test'
 relocations:     []
 ...

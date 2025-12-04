@@ -5,7 +5,7 @@
             "includePath": [
                 "/opt/homebrew/include/mysql/",
                 "${workspaceFolder}/libs/**",
-                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/src/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
