@@ -45,9 +45,10 @@ int query_request(SSL *ssl, const char * session_id, const char * user_name, con
     const char * message;
     int res=_query_request(session_id,user_name,token,&message);
 
-    SSL_write(ssl,message,strlen(message)+1);
+    SSL_write(ssl,message,strlen(message));
     return res;
 }
+
 
 
 # endif

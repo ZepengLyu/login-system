@@ -29,7 +29,8 @@ int server_listen (SSL * ssl, MYSQL * my_connection){
     const char * buf = OPENSSL_zalloc(MESSAGE_BUFFER_MAX_SIZE+1);
     size_t buf_size;    
 
-    while (true){
+    
+    while (!(SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN)){
         buf_size=SSL_read(ssl,buf,MESSAGE_BUFFER_MAX_SIZE);
         if (buf_size==0){
             continue;
@@ -43,27 +44,34 @@ int server_listen (SSL * ssl, MYSQL * my_connection){
             case REGISTER_TOKEN_REQUEST:
                 register_token_request_callback(ssl,my_connection,buf,buf_size);
                 break;
-            // case LOGIN_REQUEST:
-            //     login_request_callback(ssl,my_connection,buf,buf_size);
-            //     break;
-            // case RESPONSE_REQUEST:
-            //     response_request_callback(ssl,my_connection,buf,buf_size);
-            // case QUERY_REQUEST:
-            //     query_request_callback(ssl,my_connection,buf,buf_size);
-            //     break;
-            // case UPDATE_REQUEST:
-            //     update_request_callback(ssl,my_connection,buf,buf_size);
-            //     break;
-            // case CHANGE_FACTOR_REQUEST:
-            //     change_factor_request_callback(ssl,my_connection,buf,buf_size);
-            //     break;
-            // case CHANGE_FACTOR_TOKEN_REQUEST:
-            //     change_factor_token_request_callback(ssl,my_connection,buf,buf_size);
-            //     break;
-            // default:
+            case LOGIN_REQUEST:
+                login_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case RESPONSE_REQUEST:
+                response_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case QUERY_REQUEST:
+                query_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case UPDATE_REQUEST:
+                update_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case CHANGE_FACTOR_REQUEST:
+                change_factor_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case CHANGE_FACTOR_TOKEN_REQUEST:
+                change_factor_token_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case QUIT_REQUEST:
+                // quit_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            default:
+                // unrecognized request
+                break;
                 
         }
     }
+    fprintf(stderr,"client disconnected\n");
     return 0;
 }
 

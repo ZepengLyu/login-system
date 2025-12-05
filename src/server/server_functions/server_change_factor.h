@@ -73,7 +73,7 @@ int _change_factor_request_callback(MYSQL * my_connection, const char * buf, siz
             }      
             else{                       // case 4: success
                 change_factor_feedback_t * feedback=create_change_factor_feedback(change_factor_request->session_id,change_factor_request->user_name,"0","the email has been sent to the designated email"); 
-                * email_token_pp=email_token; // used in test 
+                // * email_token_pp=email_token; // used in test 
                 * message_pp=create_change_factor_feedback_message(feedback);
             }
             return 0;                    
@@ -93,7 +93,7 @@ int change_factor_request_callback(SSL *ssl, MYSQL * my_connection, const char *
 /* round 2 */
 
 // parse request
-change_factor_token_request_t * parse_change_factor_token_request(const unsigned char * buf, size_t buf_size)
+change_factor_token_request_t * parse_change_factor_token_request(const char * buf, size_t buf_size)
 {
     change_factor_token_request_t * change_factor_token_request =_create_request(sizeof(change_factor_token_request_t));
     get_with_va(buf,buf_size,4,

@@ -65,10 +65,8 @@ static BIO *create_socket_bio(const char *hostname, const char *port, int family
     return bio;
 }
 
-int client_process(const char * hostname, const char *port, const char *pem_folder) 
+int client_process(const char * hostname, const char *port, const char *pem_file) 
 {   
-
-
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
     BIO *bio = NULL;
@@ -90,10 +88,10 @@ int client_process(const char * hostname, const char *port, const char *pem_fold
     }
 
     // Configure the client to abort the handshake if certificate verification fails
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
-
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    SSL_CTX_set_verify_depth(ctx, 2);
     // const char pem_folder[]="./pem/";
-    if (!SSL_CTX_load_verify_dir(ctx,pem_folder)) {
+    if (!SSL_CTX_load_verify_locations(ctx, pem_file, NULL)) {
         fprintf(stderr, "Failed to load CA certificates\n");
     }
 
@@ -148,9 +146,9 @@ int client_process(const char * hostname, const char *port, const char *pem_fold
 
     
  /* main part*/  
-    printf("服务器连接成功");
+    printf("服务器连接成功\n");
     client_request(ssl);
- 
+    printf("已退出服务器连接\n");
    
 
 
@@ -174,6 +172,7 @@ int client_process(const char * hostname, const char *port, const char *pem_fold
  
     /* Success! */
     res = EXIT_SUCCESS;
+    
     end:
         if (res == EXIT_FAILURE)
             ERR_print_errors_fp(stderr);

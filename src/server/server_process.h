@@ -136,7 +136,6 @@ int server_process(const char * hostport,const char * chain_file,const char * ke
         }
         
         server_listen(ssl,my_connection);
-    
         SSL_free(ssl);
     }
 

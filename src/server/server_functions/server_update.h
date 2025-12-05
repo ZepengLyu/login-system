@@ -13,14 +13,14 @@
 #include "../../crypto.h"
 
 
-update_request_t *  parse_update_request(const unsigned char * buf, size_t buf_size)
+update_request_t *  parse_update_request(const char * buf, size_t buf_size)
 {   
     update_request_t * update_request=_create_request(sizeof(update_request_t));
     get_with_va(buf,buf_size,4,
         &update_request->session_id, 
         &update_request->user_name,
-        &update_request->token,
-        &update_request->data
+        &update_request->data,
+        &update_request->token
     );
     return update_request;
 }

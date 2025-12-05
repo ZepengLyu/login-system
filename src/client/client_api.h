@@ -7,16 +7,16 @@
 # include "./client_functions/client_change_factor.h"
 
 /* 接收用户指令 */
-command_t listen_client_command(){
-    char *command=OPENSSL_zalloc(COMMAND_MAX_SIZE);
-    printf("请输入您要进行的操作，可允许的操作包括 register, login, query, update, change factor\n");
+command_t listen_client_command(const char * prompt){
+    char *command=OPENSSL_zalloc(COMMAND_MAX_SIZE+1);
+    printf(prompt);
     scanf("%s",command);
-    // fgets(command,sizeof(command),stdin);
 
     command_t command_type=get_command_type(command);
     return command_type;
 }
 
+/* 监听指定的 server 消息 */
 int check_message(const char * buf,size_t buf_size,const char *session_id, const char * user_name,const char wait_type){
     const char _type=buf[0];
     const char * _session_id;
@@ -53,90 +53,175 @@ void client_listen(SSL *ssl,const char *session_id, const char * user_name, cons
     }
 }
 
+
+/* 询问客户输入*/
+int enquire_data(const char * prompt,char * data){
+    printf(prompt);
+    scanf("%s",data);
+    return 0;
+}
+
+
 /* 用户进行注册 */
+int register_process(SSL *ssl, const char * session_id){
+    /* configuration */
+    const char *privatekey_file=CLIENT_PRIVATEKEY_FILE;
+    char * user_name=malloc(USERNAME_MAX_SIZE+1);
+    char * email=OPENSSL_zalloc(EMAIL_MAX_SIZE+1);
+    char * email_token= OPENSSL_zalloc(EMAIL_TOKEN_MAX_SIZE+1);
+    const char * buf; size_t buf_size;
+    int review_res;
+    const char * error_str;
 
-int enquire_user_name(char * user_name){ 
-    printf("请输入想要注册的用户名\n");
-    scanf("%s",user_name);
-    return 0;
+    enquire_data("请输入需要注册的 user_name: ",user_name);
+    enquire_data("请输入注册邮箱:", email);
+
+    register_request(ssl, session_id, user_name, email, privatekey_file);               
+    client_listen(ssl,session_id,user_name,REGISTER_PERMISSION_FEEDBACK,&buf,&buf_size);
+    review_res=review_feedback(buf,buf_size,&error_str);
+    if (review_res){                            // case 1: error (round 1)
+        printf("register fails: %s\n",error_str);
+        return 1;
+    }
+    else{
+        enquire_data("请输入邮箱收到的 token:",email_token);
+        register_token_request(ssl, session_id, user_name, email_token);
+        client_listen(ssl,session_id,user_name,REGISTER_RESULT_FEEDBACK,&buf,&buf_size);
+        review_res=review_feedback(buf,buf_size,error_str);
+        if (review_res){                        // case 2: error (round 2)
+            printf("register fails: %s\n",error_str);
+            return 1;
+        }
+        else{                                   // case 3: success
+            printf("register success\n");
+            return 0;
+        }
+    }    
 }
-
-int enquire_email( char * email){
-
-    printf("请输入想要注册的邮箱\n");
-    scanf("%s",email);
-    return 0;
-}
-int enquire_email_token(char * email_token){
-
-    printf("请输入邮箱收到的 token\n");
-    scanf("%s",email_token);
-    return 0;
-}
-
-
-
-// int client_register(SSL * ssl, const char * session_id){
-//     const char * privatekey_file=CLIENT_PRIVATEKEY_FILE;
-//     /* 获得用户信息 */
-//     // char user_name[USERNAME_MAX_SIZE];
-//     printf("请输入想要注册的用户名");
-//     const char *user_name="jack";
-//     // scanf("%s", &user_name);
-
-//     // char email[EMAIL_MAX_SIZE];
-//     const char *email="lyuzepeng.app@gmail.com";
-//     printf("请输入想要注册的邮箱");
-//     // scanf("%s", &email);
-
-//     /* 发送注册请求 */
-//     register_request(ssl, session_id, user_name, email, privatekey_file);
-
-//     /* 等待服务器允许注册回复*/
-//     int allowed_res=listen_register_permission_feedback(ssl, session_id, user_name);
-
-//     if (allowed_res==0){  
-//         /* user_name 被允许注册 */
-//         // 获得 email token
-//         char email_token[EMAIL_TOKEN_MAX_SIZE];
-//         printf("请输入邮箱收到的 TOKEN");
-//         scanf("%s", &email_token);
-    
-//         register_token_request(ssl, session_id, user_name, email_token);
-
-//         // 等待 server acknowledge register 回复
-//         const char * message;
-//         int ack_res=listen_register_result_feedback(ssl,session_id,user_name);
-
-//         if (ack_res==0){ //注册成功
-//             return 0; 
-//         }
-//         else{                   // 注册失败
-//             printf(message);     // 输出错误信息
-//             return 1;       
-//         }
-//     }
-//     else{
-//         /* user_name 不被允许注册 */
-//         return 1;
-//     }
-// }
 
 /* 用户进行登陆*/
-int client_login(){
+int login_process(SSL *ssl,const char *session_id){
+    /* configuration*/
+    const char *privatekey_file=CLIENT_PRIVATEKEY_FILE;
+    char * user_name=malloc(USERNAME_MAX_SIZE+1);
+    char * new_data=malloc(DATA_MAX_SIZE+1);
+    const char * buf; size_t buf_size;
+    int review_res;
+    const char * error_str;
+    const char * token;
+   
+
+    enquire_data("请输入需要登陆的帐户 user_name",user_name);
+    login_request(ssl,session_id,user_name);
+    client_listen(ssl,session_id,user_name,CHALLENGE_FEEDBACK,&buf,&buf_size);
+    review_res=review_feedback(buf,buf_size,&error_str);
+    if (review_res){                            // case 1: login error (round 1)
+        printf("login fails: %s\n",error_str);
+        return 1;
+    }
+    else{
+        EVP_PKEY * pkey;
+        int import_pkey_res=import_privatekey(&pkey,privatekey_file);
+        response_challenge(ssl, buf, buf_size, session_id, user_name,pkey);
+        client_listen(ssl,session_id,user_name,TOKEN_FEEDBACK,&buf,&buf_size);
+        review_res=review_feedback(buf,buf_size,&error_str);
+        if (review_res){                            // case 2: login error (round 2)
+            printf("login fails: %s\n",error_str);
+            return 1;
+        }
+        else{                                       // case 3: success
+            token=get_token(buf,buf_size);
+            printf("login success\n");
+            int login_status=1;
+            while (login_status){
+                command_t client_operation=listen_client_command("请输入需要进行的操作，可运行的操作包括 query, upate, change_factor");   // enquire client operation: query, update, quit
+                switch (client_operation)
+                {   case CMD_QUERY:
+                        query_request(ssl,session_id,user_name,token);
+                        client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
+                        review_res=review_feedback(buf,buf_size,&error_str);
+                        if (review_res){
+                            printf("query fails: %s\n",error_str);
+                            continue;
+                        }
+                        else{
+                            printf("query result: %s\n",error_str);
+                            continue;
+                        }
+                        break;
+
+                    case CMD_UPDATE:
+                        enquire_data("请输入需要更新的数据",new_data);
+                        update_request(ssl,session_id,user_name,new_data,token);
+                        client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
+                        review_res=review_feedback(buf,buf_size,&error_str);
+                        if (review_res){
+                            printf("update fails: %s\n",error_str);
+                            continue;
+                        }
+                        else{
+                            printf("update success\n");
+                            continue;
+                        }
+                        break;
+
+                    // case CMD_QUIT_LOGIN:
+                    //     quit_request(ssl,session_id,user_name,new_data,token);
+                    //     client_listen(ssl,session_id,user_name,QUIT_FEEDBACK,&buf,&buf_size);
+                    //     review_res=review_feedback(buf,buf_size,&error_str);
+                    //     if (review_res){
+                    //         printf("quit fail: %s\n",error_str);
+                    //         continue;
+                    //     }
+                    //     else{
+                    //         printf("quit success\n");
+                    //         login_status=0;
+                    //         continue;
+                    //     }
+                    //     break;
+                    default:
+                        printf("unrecognized command\n");
+                        continue;
+                }
+            }
+        }
+    }
+
     
-}
-
-/* 用户进行查询*/
-int client_query(SSL * ssl, const char * session_id, const char * token){
-}
-
-/* 用户进行更新*/
-int client_update(SSL * ssl, const char * session_id, const char * token){
 }
 
 /* 用户更改 factor */
-int client_change_factor(SSL * ssl, const char * session_id){
+int change_factor_process(SSL * ssl, const char * session_id){
+    /* configuration */
+    char * user_name=malloc(USERNAME_MAX_SIZE+1);
+    char * email_token= OPENSSL_zalloc(EMAIL_TOKEN_MAX_SIZE+1);
+
+    const char * buf; size_t buf_size;
+    char * error_str;
+    int review_res;
+
+    enquire_data("请输入需要更改的帐户的 user_name ",user_name);
+    change_factor_request(ssl,session_id,user_name);
+    client_listen(ssl,session_id,user_name,CHANGE_FACTOR_FEEDBACK,&buf,&buf_size);
+    review_res=review_feedback(buf,buf_size,&error_str);
+    if (review_res){                            // case 1: error (round 1)
+        printf("change factor fails: %s\n",error_str);
+        return 1;
+    }
+    else{
+        enquire_data("请输入邮箱收到的 token",email_token);
+        change_factor_token_request(ssl, session_id, user_name, email_token);
+        client_listen(ssl,session_id,user_name,CHANGE_FACTOR_TOKEN_FEEDBACK,&buf,&buf_size);
+        review_res=review_feedback(buf,buf_size,error_str);
+        if (review_res){                        // case 2: error (round 2)
+            printf("change factor fails: %s\n",error_str);
+            return 1;
+        }
+        else{                                   // case 3: success
+            printf("change factor success\n");
+            return 0;
+        }
+    }    
 }
 
 
@@ -145,75 +230,28 @@ int client_request(SSL *ssl){
 
     /* configuration */
     const char * session_id=generate_session_id();
-    
-    /* user_data*/
-    char * user_name=OPENSSL_zalloc(USERNAME_MAX_SIZE+1);
-    char * email=OPENSSL_zalloc(EMAIL_MAX_SIZE+1);
-    const char *privatekey_file=CLIENT_PRIVATEKEY_FILE;
-    
-    /* cache */
-    const char * buf = OPENSSL_zalloc(MESSAGE_BUFFER_MAX_SIZE+1);
-    size_t buf_size;
 
-    const char *token=OPENSSL_zalloc(HEX_TOKEN_SIZE+1);
-    const char *email_token=OPENSSL_zalloc(HEX_EMAIL_TOKEN_SIZE+1);
-    
-    int review_res;
-
-    const char * error_str;
 
     while (true){
         
         // user command
-        command_t command_type=listen_client_command();
-        command_type=CMD_REGISTER;
+        command_t command_type=listen_client_command("请输入您要进行的操作，可允许的操作包括 register, login, change factor\n");
         switch(command_type){
             case CMD_REGISTER:             
-                enquire_user_name(user_name);
-                enquire_email(email);
-
-                register_request(ssl, session_id, user_name, email, privatekey_file);               
-                client_listen(ssl,session_id,user_name,REGISTER_PERMISSION_FEEDBACK,&buf,&buf_size);
-                review_res=review_feedback(buf,buf_size,&error_str);
-                if (review_res){                            // case 1: error
-                    printf("register fails: %s\n",error_str);
-                    continue;
-                }
-                else{
-                    enquire_email_token(email_token);
-                    register_token_request(ssl, session_id, user_name, email_token);
-                    client_listen(ssl,session_id,user_name,REGISTER_RESULT_FEEDBACK,&buf,&buf_size);
-                    review_res=review_feedback(buf,buf_size,error_str);
-                    if (review_res){                        // case 2: error
-                        printf("register fails: %s\n",error_str);
-                        continue;
-                    }
-                    else{                                   // case 3: success
-                        printf("register success\n");
-                        continue;
-                    }
-                }    
+                register_process(ssl,session_id);
                 break;
             case CMD_LOGIN:
-                enquire_user_name(user_name);
-                login_request(ssl,session_id,user_name);
-                client_listen(ssl,session_id,user_name,CHALLENGE_FEEDBACK,&buf,&buf_size);
-                
-
-                // login(ssl,session_id,&token);
-                break;
-            case CMD_QUERY:
-                // client_query(ssl,session_id,token);
-                break;
-            case CMD_UPDATE:
-                // client_update(ssl,session_id,token);
+                login_process(ssl,session_id);
                 break;
             case CMD_CHANGE_FACTOR:
-                // client_change_factor(ssl,session_id);
+                change_factor_process(ssl,session_id);
                 break;
             case CMD_OTHER:
-                // fprintf(stderr,"Unrecognized Command");
+                fprintf(stderr,"Unrecognized Command");
+                int shutdown_res = SSL_shutdown(ssl);
+                return 0;
                 break;
+            
 
         }
     }

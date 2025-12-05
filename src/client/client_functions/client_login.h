@@ -42,7 +42,7 @@ int _login_request(const char * session_id, const char * user_name,const char **
 int login_request(SSL *ssl, const char * session_id, const char * user_name){
     const char * message;
     int res=_login_request( session_id, user_name, &message);
-    SSL_write(ssl,message,strlen(message+1));
+    SSL_write(ssl,message,strlen(message));
     return res;
 }
 
@@ -71,20 +71,22 @@ int check_challenge(challenge_feedback_t *client_challenge_feedback, const char 
     return 0;
 }
 
-int handle_challenge(const char * buf,size_t buf_size, const char * session_id, const char * user_name, const char ** challenge_pp){
+int handle_challenge(const char * buf,size_t buf_size,
+    // const char * session_id, const char * user_name,
+     const char ** challenge_pp){
     // parse_chanllege_feedback
     challenge_feedback_t * parsed_feedback=parse_challenge_feedback(buf, buf_size);
 
     // check challenge
-    int check_res=check_challenge(parsed_feedback, session_id, user_name);
-    if (check_res==0){
+    // int check_res=check_challenge(parsed_feedback, session_id, user_name);
+    // if (check_res==0){
         * challenge_pp=parsed_feedback->challenge;
         return 0;
-    }
-    else{
-        * challenge_pp=NULL;
-        return 1;
-    }
+    // }
+    // else{
+    //     * challenge_pp=NULL;
+    //     return 1;
+    // }
 }
 
 // int listen_challenge(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_challenge_pp){
@@ -132,7 +134,9 @@ const char * create_response_request_message(response_request_t * response_reque
 int _response_challenge( const char * buf, size_t buf_size, const char * session_id, const char * user_name,EVP_PKEY * pkey, const char ** message_pp)
 {
     const char * challenge;
-    int handle_res=handle_challenge(buf,buf_size,session_id,user_name,&challenge);
+    int handle_res=handle_challenge(buf,buf_size,
+        // session_id,user_name,
+        &challenge);
     
     if (handle_res){
         fprintf(stderr,"handle challenge feedback gets problem\n");
@@ -202,6 +206,20 @@ int handle_token(const char * buf, size_t buf_size,
 
     *token_pp=token_feedback->token;
     return 0;
+}
+
+const char * get_token(const char * buf, size_t buf_size){
+    const char * token=OPENSSL_zalloc(HEX_TOKEN_SIZE+1);
+    token_feedback_t * token_feedback = parse_token_feedback(buf, buf_size);
+    memcpy(token,token_feedback->token,strlen(token_feedback->token)+1);
+
+    free(token_feedback);
+    return token;
+}
+
+int quit_request(SSL *ssl, const char *session_id, const char * user_name,const char * new_data,const char * token)
+{
+
 }
 
 // int listen_token(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_token_pp){

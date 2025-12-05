@@ -18,10 +18,13 @@ MYSQL * connect_database(){
     }
     if (mysql_real_connect(my_connection, HOST, USERNAME, PASSWORD, DATABASE, 0, NULL, CLIENT_FOUND_ROWS)==NULL){
         fprintf(stderr,"mysql_real_connect fails");
+        mysql_close(my_connection);
         return NULL;
     }
     if (mysql_set_character_set(my_connection, "ascii")) {
         fprintf(stderr, "mysql_set_character_set fails: %s\n", mysql_error(my_connection));
+        mysql_close(my_connection);
+        return NULL;
     }
     return my_connection;
 }
@@ -42,6 +45,7 @@ int _query_database(MYSQL * my_connection, char * sql,size_t counts,...){
     }
     if (mysql_stmt_prepare(stmt, sql, strlen(sql))){
         fprintf(stderr, "mysql_stmt_prepare fails: %s\n", mysql_stmt_error(stmt));
+        mysql_stmt_close(stmt);
         return -1;
     };
     
@@ -86,7 +90,11 @@ int _query_database(MYSQL * my_connection, char * sql,size_t counts,...){
 
     va_end(args);
 
-    const char * _result_data=OPENSSL_zalloc(DB_BUFFER_MAX_SIZE);
+    char * _result_data=OPENSSL_zalloc(DB_BUFFER_MAX_SIZE);
+    if (_result_data==NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return -1;
+    }
     size_t  _result_data_size;
     
     result_bind[0].buffer_type = result_data_type;
@@ -106,13 +114,12 @@ int _query_database(MYSQL * my_connection, char * sql,size_t counts,...){
         return -1;
     }
 
-
     if (mysql_stmt_fetch(stmt)) {
         fprintf(stderr, "mysql_stmt_fetch falls: %s\n", mysql_stmt_error(stmt));
         mysql_stmt_close(stmt);
         return 1;
     }
-    
+
     * result_data_pp=_result_data;
     * result_data_size_p= _result_data_size;
     
@@ -124,19 +131,18 @@ int _update_database(MYSQL * my_connection, char *sql,size_t counts,...){
     // 可变参数格式: data, data_size_p, data_type, 例如 user_name, username_size, MYSQL_TYPE_STRING
     // 这里必须是 data_size_p 否则会出现 insert 数据长度的错误
     // 不包含 result data
+
     MYSQL_STMT *stmt;   
     stmt = mysql_stmt_init(my_connection);
     if (stmt==NULL){
         fprintf(stderr, "mysql_stmt_init fails %s\n");
-        // mysql_stmt_close(stmt);
         return -1;
     }
     if (mysql_stmt_prepare(stmt, sql, strlen(sql))){
         fprintf(stderr, "mysql_stmt_prepare fails: %s\n", mysql_stmt_error(stmt));
-        // mysql_stmt_close(stmt);
+        mysql_stmt_close(stmt);
         return -1;
     };
-
 
     MYSQL_BIND param_bind[counts];
     memset(param_bind, 0, sizeof(param_bind));
@@ -145,7 +151,7 @@ int _update_database(MYSQL * my_connection, char *sql,size_t counts,...){
     va_start(args, counts);
 
     for (int i = 0; i < counts; i++) {
-        const char * data = va_arg(args, const char *);
+        char * data = va_arg(args, char *);
         size_t * data_size_p = va_arg(args, size_t*);
 
         enum_field_types data_type=va_arg(args,enum_field_types);
@@ -156,10 +162,9 @@ int _update_database(MYSQL * my_connection, char *sql,size_t counts,...){
         param_bind[i].length = data_size_p;
     }
 
-   
     if (mysql_stmt_bind_param(stmt, param_bind)) {
         fprintf(stderr, "mysql_stmt_bind_param fails: %s\n",mysql_stmt_error(stmt));
-        // mysql_stmt_close(stmt);
+        mysql_stmt_close(stmt);
         return -1;
     }
 
@@ -425,7 +430,7 @@ int validate_change_factor_token(MYSQL * my_connection, const char *session_id, 
         return 1; // 未找到目标 change_factor_token
     }
     if (query_res==0){
-        if (memcmp(change_factor_token,ret_change_factor_token,ret_change_factor_token_size)){
+        if (memcmp(change_factor_token,ret_change_factor_token,ret_change_factor_token_size)==0){
             return 0;  
         }
     }
@@ -641,12 +646,15 @@ int record_change_factor_token(MYSQL* my_connection, const unsigned char * sessi
     size_t token_size=strlen(token);
 
     char *sql=(char *)malloc(SQL_MAX_LEN);
-    sprintf(sql,"INSERT INTO %s (session_id, user_name, change_factor_token) VALUES(?,?,?)",TAB_SESSION);
+    sprintf(sql,"INSERT INTO %s (session_id, user_name, login_request_timestamp,change_factor_token) VALUES(?,?,?,?)",TAB_SESSION);
 
+    const char * datetime=get_datetime_str();
+    size_t datetime_size=19;   
 
-    int update_res=_update_database(my_connection,sql,3,
+    int update_res=_update_database(my_connection,sql,4,
         session_id, &session_id_size, MYSQL_TYPE_BLOB,
         user_name, &username_size, MYSQL_TYPE_STRING,
+        datetime,&datetime_size,MYSQL_TYPE_STRING,   
         token, &token_size, MYSQL_TYPE_BLOB);
 
     free(sql);

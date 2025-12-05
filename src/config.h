@@ -7,6 +7,8 @@
 # define COMMAND_MAX_SIZE 100
 # define USERNAME_MAX_SIZE 20
 # define EMAIL_MAX_SIZE 20
+# define DATA_MAX_SIZE 100
+# define OPERAION_MAX_SIZE 10
 
 # define MESSAGE_BUFFER_MAX_SIZE 3000
 
@@ -16,7 +18,8 @@
 # define C_QUERY 3
 # define C_UPDATE 4
 # define C_CHANGE_FACTOR 5
-# define C_OTHER 6 
+# define C_QUIT_LOGIN 7
+# define C_OTHER 7
 
 typedef enum {
     CMD_REGISTER = C_REGISTER,
@@ -24,6 +27,7 @@ typedef enum {
     CMD_QUERY=C_QUERY,
     CMD_UPDATE=C_UPDATE,
     CMD_CHANGE_FACTOR=C_CHANGE_FACTOR,
+    CMD_QUIT_LOGIN=C_QUIT_LOGIN,
     CMD_OTHER=C_OTHER
 } command_t;
 
@@ -32,7 +36,7 @@ command_t get_command_type(const char* cmd_str) {
     if (strcmp(cmd_str, "login") == 0) return CMD_LOGIN;
     if (strcmp(cmd_str, "query") == 0) return CMD_QUERY;
     if (strcmp(cmd_str, "update") == 0) return CMD_UPDATE;
-    if (strcmp(cmd_str, "change factor") == 0) return CMD_CHANGE_FACTOR;
+    if (strcmp(cmd_str, "change_factor") == 0) return CMD_CHANGE_FACTOR;
     return CMD_OTHER;
 }
 

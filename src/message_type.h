@@ -14,12 +14,15 @@
 
 # define QUERY_REQUEST '8'
 # define UPDATE_REQUEST '9'
-# define RESULT_FEEDBACK '10'
+# define RESULT_FEEDBACK 'A'
+# define QUIT_REQUEST 'B'
+# define QUIT_FEEDBACK 'C'
 
-# define CHANGE_FACTOR_REQUEST '11'
-# define CHANGE_FACTOR_FEEDBACK '12'
-# define CHANGE_FACTOR_TOKEN_REQUEST '13'
-# define CHANGE_FACTOR_TOKEN_FEEDBACK '14'
+# define CHANGE_FACTOR_REQUEST 'D'
+# define CHANGE_FACTOR_FEEDBACK 'E'
+# define CHANGE_FACTOR_TOKEN_REQUEST 'F'
+# define CHANGE_FACTOR_TOKEN_FEEDBACK 'G'
+
 /* register */
 typedef struct{
     const char * session_id;

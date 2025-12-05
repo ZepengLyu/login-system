@@ -81,7 +81,7 @@ int _login_request_callback(MYSQL* my_connection, const char * buf, size_t buf_s
 int login_request_callback(SSL * ssl, MYSQL* my_connection, const char * buf, size_t buf_size){
     const char * message;
     int res=_login_request_callback(my_connection,buf,buf_size,&message);
-    SSL_read(ssl,message,strlen(message)+1);
+    SSL_write(ssl,message,strlen(message)+1);
     return res;
 }
 

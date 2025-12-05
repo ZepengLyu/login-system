@@ -33,6 +33,13 @@ int _change_factor_request(const char * session_id, const char * user_name,const
     *message_pp=create_change_factor_request_message(request);
     return 0;
 }
+
+int change_factor_request(SSL *ssl, const char * session_id, const char * user_name){
+    const char * message;
+    _change_factor_request(session_id,user_name,&message);
+    SSL_write(ssl,message,strlen(message));
+    return 0;
+}
 /* round 2*/
 
 change_factor_token_request_t * create_change_factor_token_request(const char * session_id, const char * user_name, const char * new_public_key, const char * token){
@@ -64,11 +71,11 @@ int _change_factor_token_request(const char * session_id, const char * user_name
     const char *new_pubkey;
     int generate_res=generate_keypair(&new_pubkey,CLIENT_PRIVATEKEY_FILE);
     change_factor_token_request_t * request=create_change_factor_token_request(session_id, user_name, new_pubkey,email_token);
-    *message_pp=create_change_factor_request_message(request);
+    * message_pp=create_change_factor_token_request_message(request);
     return 0;
 }
 
-int change_factor_token_request(SSL *ssl,const char * session_id, const char * user_name,const char * email_token,const char ** message_pp){
+int change_factor_token_request(SSL *ssl,const char * session_id, const char * user_name,const char * email_token){
     const char * message;
     int res=_change_factor_token_request(session_id,user_name,email_token, & message);
     SSL_write(ssl,message,strlen(message));

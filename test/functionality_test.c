@@ -21,34 +21,34 @@ const char * change_factor_token;
 MYSQL * my_connection;
 
 
-// user register test
-int register_test(MYSQL * my_connection, const char * session_id){
+// // user register test
+// int register_test(MYSQL * my_connection, const char * session_id){
 
-    const char * client_message;
-    int res;
-    /* client */
-    res=_register_request(session_id, user_name, email, privatekey_file,&client_message);
-    if (res)
-        exit(1);
+//     const char * client_message;
+//     int res;
+//     /* client */
+//     res=_register_request(session_id, user_name, email, privatekey_file,&client_message);
+//     if (res)
+//         exit(1);
 
-    /* server */
-    const char * server_message;
-    const char * email_token;
-    res=_register_request_callback(my_connection,client_message,strlen(client_message),&server_message,&email_token);
-    if (res)  return 1;
+//     /* server */
+//     const char * server_message;
+//     const char * email_token;
+//     res=_register_request_callback(my_connection,client_message,strlen(client_message),&server_message,&email_token);
+//     if (res)  return 1;
    
-    /* client */
-    res=handle_register_permission_feedback(server_message,strlen(server_message),session_id,user_name);
+//     /* client */
+//     res=handle_register_permission_feedback(server_message,strlen(server_message),session_id,user_name);
 
-    free(client_message);
-    res=_register_token_request(session_id, user_name, email_token, &client_message);
+//     free(client_message);
+//     res=_register_token_request(session_id, user_name, email_token, &client_message);
 
-    /* server */
-    free(server_message);
-    res=_register_token_request_callback(my_connection,client_message,strlen(client_message)+1,&server_message);
+//     /* server */
+//     free(server_message);
+//     res=_register_token_request_callback(my_connection,client_message,strlen(client_message)+1,&server_message);
 
-    return 0;
-}
+//     return 0;
+// }
 
 int login_test(MYSQL * my_connection, const char * session_id,const char ** token_pp){
     /* client */
