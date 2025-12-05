@@ -87,26 +87,26 @@ int handle_challenge(const char * buf,size_t buf_size, const char * session_id, 
     }
 }
 
-int listen_challenge(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_challenge_pp){
-    char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
-    size_t buf_size;
+// int listen_challenge(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_challenge_pp){
+//     char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
+//     size_t buf_size;
 
-    while (true){
-        buf_size=SSL_read_c(ssl,buf,BUFFER_MAX_SIZE);
-        char feedback_type=buf[0];
+//     while (true){
+//         buf_size=SSL_read(ssl,buf,BUFFER_MAX_SIZE);
+//         char feedback_type=buf[0];
 
-        if (feedback_type==CHALLENGE_FEEDBACK){
-            if (handle_challenge(buf,buf_size,session_id,user_name,ret_challenge_pp)==0){ 
-                return 0;
-            }
-            else{
-                continue; // 其他人的反馈
-            }
-        }
-        else  // 其他类型的消息
-            continue; 
-        }
-};
+//         if (feedback_type==CHALLENGE_FEEDBACK){
+//             if (handle_challenge(buf,buf_size,session_id,user_name,ret_challenge_pp)==0){ 
+//                 return 0;
+//             }
+//             else{
+//                 continue; // 其他人的反馈
+//             }
+//         }
+//         else  // 其他类型的消息
+//             continue; 
+//         }
+// };
 
 
 response_request_t * create_response_request(const char *session_id,const char * user_name, const char * signature){
@@ -204,28 +204,28 @@ int handle_token(const char * buf, size_t buf_size,
     return 0;
 }
 
-int listen_token(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_token_pp){
+// int listen_token(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_token_pp){
 
-    char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
-    size_t buf_size;
+//     char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
+//     size_t buf_size;
 
-    while (true){
-        buf_size=SSL_read_c(ssl,buf,BUFFER_MAX_SIZE);
-        char feedback_type=buf[0];
+//     while (true){
+//         buf_size=SSL_read(ssl,buf,BUFFER_MAX_SIZE);
+//         char feedback_type=buf[0];
 
-        if (feedback_type==TOKEN_FEEDBACK){
+//         if (feedback_type==TOKEN_FEEDBACK){
             
-            if (handle_token(buf,buf_size,session_id,user_name,ret_token_pp)==0){ 
-                return 0;
-            }
-            else{
-                continue; // 其他人的反馈
-            }
-        }
-        else  // 其他类型的消息
-            continue; 
-        }
+//             if (handle_token(buf,buf_size,session_id,user_name,ret_token_pp)==0){ 
+//                 return 0;
+//             }
+//             else{
+//                 continue; // 其他人的反馈
+//             }
+//         }
+//         else  // 其他类型的消息
+//             continue; 
+//         }
 
 
-};
+// };
 # endif

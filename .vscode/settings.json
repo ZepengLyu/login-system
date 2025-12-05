@@ -90,7 +90,9 @@
         "server_database.h": "c",
         "client_query.h": "c",
         "client_register.h": "c",
-        "server_email.h": "c"
+        "server_email.h": "c",
+        "errno.h": "c",
+        "fcntl.h": "c"
     }
    
 }

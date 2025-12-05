@@ -46,10 +46,12 @@ command_t get_command_type(const char* cmd_str) {
 # define PUBLIC_KEY_SIZE 1312
 # define HEX_PUBLIC_KEY_SIZE 2624
 
-# define BUFFER_MAX_SIZE 3000
+# define MESSAGE_BUFFER_MAX_SIZE 3000
+# define ERROR_MESSAGE_MAX_SIZE 100
 
 # define TOKEN_SIZE 32 
 # define HEX_TOKEN_SIZE 64 
+# define HEX_EMAIL_TOKEN_SIZE 16
 
 # define CHANGE_FACTOR_TOKEN_SIZE 8 //出于用户体验，一般不会设置得太大
 # define HEX_CHANGE_FACTOR_TOKEN_SIZE 16 //出于用户体验，一般不会设置得太大

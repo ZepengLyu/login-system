@@ -71,7 +71,7 @@ int _change_factor_token_request(const char * session_id, const char * user_name
 int change_factor_token_request(SSL *ssl,const char * session_id, const char * user_name,const char * email_token,const char ** message_pp){
     const char * message;
     int res=_change_factor_token_request(session_id,user_name,email_token, & message);
-    SSL_write(ssl,message,strlen(message);
+    SSL_write(ssl,message,strlen(message));
     return res;
 }
 # endif 

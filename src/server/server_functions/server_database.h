@@ -9,7 +9,7 @@
 #include "../../config.h"
 #include "../../common.h"
 
-/* 服务器连接*/
+
 MYSQL * connect_database(){
     MYSQL * my_connection=mysql_init(NULL);
     if (my_connection==NULL){
@@ -27,9 +27,12 @@ MYSQL * connect_database(){
 }
 
 /* 该函数应该返回查询结果中最新的一条 */
-int _query_database(MYSQL * my_connection, char *sql,size_t counts,...){
+
+int _query_database(MYSQL * my_connection, char * sql,size_t counts,...){
     // 可变参数格式: data, data_size_p, data_type, 例如 user_name, username_size, MYSQL_TYPE_STRING
-    // 最后一个 [data_pp, data_size_p, data_type] 为 result 载体
+    // 这里必须是 data_size_p 否则会出现 insert 数据长度的错误
+    // 不包含 result data
+
 
     MYSQL_STMT *stmt;   
     stmt = mysql_stmt_init(my_connection);
@@ -200,7 +203,7 @@ int validate_username(MYSQL* my_connection, const char * user_name){
     return -1;
 }
  
-// register token request 阶段
+// register token request �?�
 int validate_email_token(MYSQL * my_connection, const char *session_id, const char * user_name, const char * email_token, 
     const char ** email_pp, const char ** pubkey_pp){
         
@@ -657,6 +660,4 @@ int record_change_factor_token(MYSQL* my_connection, const unsigned char * sessi
     }    
 }  
 
-
-/* record */
 #endif

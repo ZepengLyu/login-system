@@ -10,87 +10,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-const char *local_buffer_file="../temp/temp.txt";
-// pipe
-// int client_to_server[2];  
-// int server_to_client[2];  
-// pid_t pid;
-// char buffer[BUFFER_MAX_SIZE];
-
-// int client_SSL_read(){
-//     close(client_to_server[1]);  // 关闭父→子的写端
-//         close(server_to_client[0]);  // 关闭子→父的读端
-        
-//         printf("子进程启动 (PID: %d)\n", getpid());
-
-
-// }
-// int client_SSL_write()
-// int server_SSL_read()
-// int server_SSL_write()
-
-
-
-// 创建两个管道
-// int initialize_pipes(){
-//     if (pipe(client_to_server) == -1 || pipe(server_to_client) == -1) {
-//         perror("创建管道失败");
-//         exit(EXIT_FAILURE);
-//     }
-// }
-
-
-int SSL_read_c(SSL *ssl,void * buf,int max_buf_size){
-
-    if (ssl==NULL){
-
-        // while (1){
-        //     int fd=open(local_buffer_file,O_RDWR);
-        //     if (fd<=0){
-        //         close(fd);
-        //         usleep(340 * 1000);
-        //         continue;
-        //     }
-            
-        //     int local_buffer_size=read(fd, buf, max_buf_size);
-        //     ftruncate(fd, 0);
-        //     int writen_size=write(fd, "", 0);
-            
-        //     close(fd);
-        //     return local_buffer_size;
-        // }
-    }
-    else{
-        size_t buf_size=SSL_read(ssl,buf,max_buf_size);
-        return buf_size;
-    }
-}
-
-
-int SSL_write_c(SSL *ssl,void * buf,int num){
-    if (ssl==NULL){
-       
-        // while (1){
-        //     int fd=open(local_buffer_file,O_WRONLY);
-        //     if (fd<=0){
-        //         close(fd);
-        //         usleep(340 * 1000);
-        //         continue;
-        //     }
-        //     int local_buffer_size=write(fd, buf, strlen(buf)+1);
-        //     close(fd);
-        //     return local_buffer_size;
-        // }
-    }
-    else{
-        size_t buf_size=SSL_write(ssl,buf,num);
-        return buf_size;
-    }
-}
-// char ssl_listen(SSL * ssl,char * buf, size_t *buf_size_p){
-//     *buf_size_p=SSL_read_c(ssl, buf, MESSAGE_BUFFER_MAX_SIZE);
-//     return buf[0];
-// }
 
 const char * append_character(const char * token,size_t token_size, char c){
     char * token_text= (char *)malloc(token_size + 1);
@@ -184,10 +103,7 @@ int get_with_va(const char * text, size_t text_size, int data_count,...){
     *data_pp=_data;
    
     return 0;
-
-
 }
-
 int uint8_to_hex(const unsigned char * text, size_t text_size, const char ** hex_text_pp, size_t * hex_text_p){
     
     size_t _hex_text_size=text_size*2;
@@ -205,7 +121,6 @@ int uint8_to_hex(const unsigned char * text, size_t text_size, const char ** hex
 }
 
 int hex_to_uint8(const char * text, size_t text_size, const unsigned char ** uint8_text_pp, size_t * uint8_text_p){
-    
     size_t _uint8_text_size=text_size/2;
     char * _uint8_text=malloc(_uint8_text_size);
     memset(_uint8_text,0,_uint8_text_size); 
@@ -222,59 +137,6 @@ int hex_to_uint8(const char * text, size_t text_size, const unsigned char ** uin
 }
 
 
-// int uint8_array_to_str(const unsigned char * uint8_array, size_t uint8_array_size, 
-//     const char ** text_pp, size_t * text_size_p){
-//     uint8_to_hex(uint8_array, uint8_array_size, text_pp, text_size_p);
-//     return 0;     
-// }
-
-// int str_to_uint8_array(const char * text, size_t text_size, 
-//     unsigned char ** uint8_array_pp, size_t * uint8_array_size_p)
-// {
-//     hex_to_uint8(text, text_size, uint8_array_pp, uint8_array_size_p);
-//     return 0;
-// }
-
-
-
-int uint8_to_binary(const unsigned char * text, size_t text_size, const char ** binarytext_pp, size_t *binarytext_size_p){
-    
-    size_t _binary_text_size=text_size*8;
-    char * _binary_text=malloc(_binary_text_size);
-    memset(_binary_text,48,_binary_text_size);
-    int index=0;
-
-    for (int i=0;i<text_size;i++){
-        for (int j=7;j>=0;j--){
-            _binary_text[index] = (text[i]& (1<<j))? '1':'0';
-            index++;
-        }
-    }
-    *binarytext_pp=_binary_text;
-    *binarytext_size_p=_binary_text_size;
-    return 0;
-}  
-
-int binary_to_uint8(char * binary_text, size_t binary_text_size, const unsigned char ** text_pp, size_t * text_size_p){
-    
-    size_t _text_size=binary_text_size/8;
-    unsigned char * _text=malloc(_text_size);
-    memset(_text,0,_text_size);
-
-
-    for (int i=0;i<_text_size;i++){
-       
-        for (int j=0;j<=7;j++){
-            _text[i]=_text[i]*2;
-            int bit=binary_text[8*i+j]=='1'? 1:0;
-            _text[i]= _text[i]+bit;
-        }
-    }
-    *text_pp=_text;
-    *text_size_p=_text_size;
-    return 0;
-}
-
 char * get_datetime_str(){ 
     size_t timestamp = time(NULL);
     struct tm * timeinfo = localtime((const time_t *)&timestamp);
@@ -284,5 +146,12 @@ char * get_datetime_str(){
     return datetime_str;
 }
 
+
+int review_feedback(const char * buf,size_t buf_size, const char ** error_str_pp){
+    const char * res;
+    result_feedback_t *feedback=_create_request(sizeof(result_feedback_t));
+    get_with_va(buf,buf_size,4,&feedback->session_id,&feedback->user_name,&res,error_str_pp);
+    return *res=='0'?0:1;
+}
 
 #endif

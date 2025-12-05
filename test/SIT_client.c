@@ -14,6 +14,6 @@
 int main(){
     // const char *session_id=generate_session_id(); 
     // client_register(NULL,session_id);
-    // client_process("localhost","4443",");
+    client_process("localhost","4443","./src/client/pem/");
     return 0;
 }

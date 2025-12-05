@@ -25,50 +25,45 @@
 
 int server_listen (SSL * ssl, MYSQL * my_connection){
 
-    // const char * pkey_file;
-    
-    char buf[BUFFER_MAX_SIZE];
-    size_t buf_size;    //real buffer size    
-
-    // EVP_PKEY *pubkey;
-    // FILE* fp=fopen(pkey_file,"r");
-    // pubkey=PEM_read_PUBKEY(fp,NULL,NULL,NULL);
+    /* cache */
+    const char * buf = OPENSSL_zalloc(MESSAGE_BUFFER_MAX_SIZE+1);
+    size_t buf_size;    
 
     while (true){
-            buf_size=SSL_read_c(ssl,buf,BUFFER_MAX_SIZE);
-            if (buf_size==0)
-                continue;
-            char message_type=buf[0];
+        buf_size=SSL_read(ssl,buf,MESSAGE_BUFFER_MAX_SIZE);
+        if (buf_size==0){
+            continue;
+        }
+        char message_type=buf[0];
 
-            switch(message_type){
-                case REGISTER_REQUEST:
-                    register_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case REGISTER_TOKEN_REQUEST:
-                    register_token_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case LOGIN_REQUEST:
-                    login_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case RESPONSE_REQUEST:
-                    response_request_callback(ssl,&my_connection,buf,buf_size);
-                case QUERY_REQUEST:
-                    query_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case UPDATE_REQUEST:
-                    update_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case CHANGE_FACTOR_REQUEST:
-                    change_factor_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                case CHANGE_FACTOR_TOKEN_REQUEST:
-                    change_factor_token_request_callback(ssl,&my_connection,buf,buf_size);
-                    break;
-                default:
-                    
-            }
-        }   
-    
+        switch(message_type){
+            case REGISTER_REQUEST:
+                register_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            case REGISTER_TOKEN_REQUEST:
+                register_token_request_callback(ssl,my_connection,buf,buf_size);
+                break;
+            // case LOGIN_REQUEST:
+            //     login_request_callback(ssl,my_connection,buf,buf_size);
+            //     break;
+            // case RESPONSE_REQUEST:
+            //     response_request_callback(ssl,my_connection,buf,buf_size);
+            // case QUERY_REQUEST:
+            //     query_request_callback(ssl,my_connection,buf,buf_size);
+            //     break;
+            // case UPDATE_REQUEST:
+            //     update_request_callback(ssl,my_connection,buf,buf_size);
+            //     break;
+            // case CHANGE_FACTOR_REQUEST:
+            //     change_factor_request_callback(ssl,my_connection,buf,buf_size);
+            //     break;
+            // case CHANGE_FACTOR_TOKEN_REQUEST:
+            //     change_factor_token_request_callback(ssl,my_connection,buf,buf_size);
+            //     break;
+            // default:
+                
+        }
+    }
     return 0;
 }
 
