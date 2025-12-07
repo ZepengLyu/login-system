@@ -10,45 +10,46 @@
 
 /* register request */
 
-register_request_t * create_register_request(const char * session_id, const char * user_name, const char * email, const char * pkey){
-    register_request_t * register_request= _create_request(sizeof(register_request_t));
+// register_request_t * create_register_request(const char * session_id, const char * user_name, const char * email, const char * pkey){
+//     register_request_t * register_request= _create_request(sizeof(register_request_t));
 
-    register_request->session_id=session_id;
-    register_request->user_name=user_name;
-    register_request->email=email;
-    register_request->pubkey=pkey;
+//     register_request->session_id=session_id;
+//     register_request->user_name=user_name;
+//     register_request->email=email;
+//     register_request->pubkey=pkey;
    
-    return register_request;
-}
+//     return register_request;
+// }
 
-const char * create_register_request_message(register_request_t * register_request){    
-    const char * message= fill_with_va( REGISTER_REQUEST,4,
-        register_request->session_id,
-        register_request->user_name,
-        register_request->email,
-        register_request->pubkey
-       );
-    return message;
-}
+// const char * create_register_request_message(register_request_t * register_request){    
+//     const char * message= fill_with_va( REGISTER_REQUEST,4,
+//         register_request->session_id,
+//         register_request->user_name,
+//         register_request->email,
+//         register_request->pubkey
+//        );
+//     return message;
+// }
 
-int _register_request(const char * session_id, const char * user_name, const char *email, const char * privatekey_file, const char ** message_pp){   
+int create_register_request_message(const char * session_id, const char * user_name, const char *email, const char * privatekey_file, const char ** message_pp){   
     
     const char *pubkey; 
     int generate_res=generate_keypair(&pubkey,privatekey_file);     
-    if (generate_res)
-        return -1; 
-    register_request_t * register_request=create_register_request(session_id, user_name, email, pubkey);
-
-    * message_pp=create_register_request_message(register_request);
-    return 0;
+    if (generate_res){
+        printf(stderr,"generate keypair failed");
+        *message_pp=NULL;
+        return generate_res; 
+    }
+    else{
+        * message_pp=fill_with_va(REGISTER_REQUEST,4,session_id, user_name, email, pubkey);
+        return 0;
+    }  
 }
 
 int register_request(SSL * ssl,const char * session_id, const char * user_name, const char *email, const char * privatekey_file){
 
     const char * message;
-
-    int res=_register_request(session_id, user_name, email, privatekey_file,&message);
-
+    int res=create_register_request_message(session_id, user_name, email, privatekey_file,&message);
     SSL_write(ssl,message,strlen(message)+1);
 
     return res;
@@ -99,37 +100,36 @@ int register_request(SSL * ssl,const char * session_id, const char * user_name, 
 // }
 
 /* register token request */
-register_token_request_t * create_register_token_request(const char * session_id, const char * user_name, const char * token) {
-    register_token_request_t * register_token_request = _create_request(sizeof(register_token_request_t));
+// register_token_request_t * create_register_token_request(const char * session_id, const char * user_name, const char * token) {
+//     register_token_request_t * register_token_request = _create_request(sizeof(register_token_request_t));
 
-    register_token_request->session_id = session_id;
-    register_token_request->user_name = user_name;
-    register_token_request->token = token;
+//     register_token_request->session_id = session_id;
+//     register_token_request->user_name = user_name;
+//     register_token_request->token = token;
 
-    return register_token_request;
-}
+//     return register_token_request;
+// }
 
-const char * create_register_token_request_message(register_token_request_t * register_token_request) {
-    const char * message = fill_with_va(REGISTER_TOKEN_REQUEST, 3,
-        register_token_request->session_id,
-        register_token_request->user_name,
-        register_token_request->token
-    );
-    return message;
-}
+// const char * create_register_token_request_message(register_token_request_t * register_token_request) {
+//     const char * message = fill_with_va(REGISTER_TOKEN_REQUEST, 3,
+//         register_token_request->session_id,
+//         register_token_request->user_name,
+//         register_token_request->token
+//     );
+//     return message;
+// }
 
 
-int _register_token_request(const char * session_id, const char * user_name, const char * token, const char ** message_pp) {
-    register_token_request_t * register_token_request = create_register_token_request(session_id, user_name, token);
-
-    * message_pp = create_register_token_request_message(register_token_request);
+int create_register_token_request_message(const char * session_id, const char * user_name, const char * token, const char ** message_pp) {
+   
+    * message_pp = fill_with_va(REGISTER_TOKEN_REQUEST,3,session_id, user_name, token);
 
     return 0;
 }
 
 int register_token_request(SSL *ssl,const char * session_id, const char * user_name, const char * token) {
     const char * message;
-    int res=_register_token_request(session_id, user_name, token, &message);
+    int res=create_register_token_request_message(session_id, user_name, token, &message);
     SSL_write(ssl, message, strlen(message)+1);
     return res;
 }

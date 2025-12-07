@@ -32,7 +32,7 @@ int server_listen (SSL * ssl, MYSQL * my_connection){
     
     while (!(SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN)){
         buf_size=SSL_read(ssl,buf,MESSAGE_BUFFER_MAX_SIZE);
-        if (buf_size==0){
+        if (buf_size<=0){
             continue;
         }
         char message_type=buf[0];
@@ -56,14 +56,14 @@ int server_listen (SSL * ssl, MYSQL * my_connection){
             case UPDATE_REQUEST:
                 update_request_callback(ssl,my_connection,buf,buf_size);
                 break;
+            case QUIT_REQUEST:
+                quit_request_callback(ssl,my_connection,buf,buf_size);
+                break;
             case CHANGE_FACTOR_REQUEST:
                 change_factor_request_callback(ssl,my_connection,buf,buf_size);
                 break;
             case CHANGE_FACTOR_TOKEN_REQUEST:
                 change_factor_token_request_callback(ssl,my_connection,buf,buf_size);
-                break;
-            case QUIT_REQUEST:
-                // quit_request_callback(ssl,my_connection,buf,buf_size);
                 break;
             default:
                 // unrecognized request

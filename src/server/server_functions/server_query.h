@@ -23,23 +23,22 @@ query_request_t * parse_query_request(const char * buf, size_t buf_size)
     return query_request;
 }
 
-
 int _query_request_callback(MYSQL * my_connection, const  char * buf, size_t buf_size, const char ** message_pp){
     
     query_request_t * query_request = parse_query_request(buf,buf_size);
 
-    int res=validate_token(my_connection,
+    int validate_res=validate_token(my_connection,
         query_request->session_id, 
         query_request->user_name,
         query_request->token);
 
-    if (res){ // valid token
+    if (validate_res){ // invalid token
         result_feedback_t * result_feedback=create_result_feedback(query_request->session_id,query_request->user_name,"1","invalid token");
         * message_pp=create_result_feedback_message(result_feedback);
     }
-    else{ // invalid token
-        const char * data; 
-        int res=query_data(my_connection,query_request->user_name,&data);
+    else{ // valid token
+        char * data; 
+        int query_res=query_data(my_connection,query_request->user_name,&data);
 
         result_feedback_t * result_feedback=create_result_feedback(query_request->session_id,query_request->user_name,"0",data);
         * message_pp=create_result_feedback_message(result_feedback);

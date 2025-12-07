@@ -19,7 +19,7 @@
 # define C_UPDATE 4
 # define C_CHANGE_FACTOR 5
 # define C_QUIT_LOGIN 7
-# define C_OTHER 7
+# define C_OTHER 8
 
 typedef enum {
     CMD_REGISTER = C_REGISTER,
@@ -37,6 +37,7 @@ command_t get_command_type(const char* cmd_str) {
     if (strcmp(cmd_str, "query") == 0) return CMD_QUERY;
     if (strcmp(cmd_str, "update") == 0) return CMD_UPDATE;
     if (strcmp(cmd_str, "change_factor") == 0) return CMD_CHANGE_FACTOR;
+    if (strcmp(cmd_str, "quit") == 0) return CMD_QUIT_LOGIN;
     return CMD_OTHER;
 }
 
@@ -50,7 +51,7 @@ command_t get_command_type(const char* cmd_str) {
 # define PUBLIC_KEY_SIZE 1312
 # define HEX_PUBLIC_KEY_SIZE 2624
 
-# define MESSAGE_BUFFER_MAX_SIZE 3000
+# define MESSAGE_BUFFER_MAX_SIZE 5000
 # define ERROR_MESSAGE_MAX_SIZE 100
 
 # define TOKEN_SIZE 32 
@@ -72,10 +73,9 @@ command_t get_command_type(const char* cmd_str) {
 
 #define TAB_USER_DATA "user_data"
 #define TAB_SESSION "session"
-#define TAB_REGISTER_SESSION "register_session"
 
 #define SQL_MAX_LEN 200
-#define DB_BUFFER_MAX_SIZE 20000
+#define RESULT_BUFFER_MAX_SIZE 20000
 #define DATETIME_SIZE 20
 
 

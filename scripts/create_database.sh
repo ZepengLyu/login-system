@@ -24,40 +24,21 @@ fi
 
 
 
-# build the table register_session
-TB_REGISTER_SESSION_TABLE="register_session"
-register_session_sql="DROP TABLE IF EXISTS $TB_REGISTER_SESSION_TABLE; CREATE TABLE IF NOT EXISTS $TB_REGISTER_SESSION_TABLE (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    session_id CHAR(32) NOT NULL UNIQUE,
-    user_name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    public_key TEXT NOT NULL,
-    email_token_timestamp DATETIME NOT NULL,
-    email_token TEXT NOT NULL
-);"
-
-echo "please input the password of '$LOGIN_SYSTEM_ADMIN'@'localhost' "
-if mysql -u $LOGIN_SYSTEM_ADMIN $DB_NAME -e $register_session_sql -p ; then
-    echo "Success: Create the table '$TB_REGISTER_SESSION_TABLE' successfully\n"
-else
-    echo "Error: fail to the table '$TB_REGISTER_SESSION_TABLE'\n "
-fi
-
-
 # build the table session
 TB_SESSION_TABLE="session"
 
 session_sql="DROP TABLE IF EXISTS $TB_SESSION_TABLE;CREATE TABLE IF NOT EXISTS $TB_SESSION_TABLE (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    session_id CHAR(32) NOT NULL UNIQUE,
-    user_name TEXT NOT NULL ,
-    login_request_timestamp DATETIME NOT NULL ,
-    challenge TEXT NULL,
-    response TEXT NULL,
-    response_timestamp DATETIME NULL ,
-    token TEXT NULL,
-    token_timestamp DATETIME NULL ,
-    change_factor_token TEXT NULL
+    user_name TEXT NOT NULL,
+    timestamp DATETIME NOT NULL,
+    session_id CHAR(32) NOT NULL,
+    session_type TEXT NOT NULL,
+    challenge TEXT,
+    response TEXT,
+    token TEXT,
+    email TEXT ,
+    public_key TEXT,
+    email_token TEXT
 );"
 
 echo "please input the password of '$LOGIN_SYSTEM_ADMIN'@'localhost' "

@@ -81,7 +81,12 @@ typedef struct{
     const char * res;  
     const char * token; 
 } token_feedback_t;
-/* login */
+
+typedef struct{
+    const char * session_id; 
+    const char * user_name;  
+    const char * token; 
+} quit_request_t;
 
 
 typedef struct{

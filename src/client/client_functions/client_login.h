@@ -9,241 +9,102 @@
 # include "../../crypto.h"
 
 
-/* login request */
-login_request_t * create_login_request(const char * session_id,const char *user_name){
+/* send login request */
 
-    login_request_t* login_request=_create_request(sizeof(login_request_t)); 
-
-    login_request->session_id=session_id;
-    login_request->user_name=user_name;
-    
-    return login_request;
-}
-
-const char * create_login_request_message(login_request_t * login_request){
-    
-    const char * message;
-    message=fill_with_va(LOGIN_REQUEST,2,
-        login_request->session_id,
-        login_request->user_name);
-    return message;
-}
-
-int _login_request(const char * session_id, const char * user_name,const char ** message_pp)
-{   
-    login_request_t * login_request=create_login_request(session_id, user_name);
-
-    * message_pp= create_login_request_message(login_request);
-
-  
+int create_login_request_message(const char * session_id, const char * user_name,const char ** message_pp){
+    * message_pp=fill_with_va(LOGIN_REQUEST,2, session_id, user_name);
     return 0;
 }
-
 int login_request(SSL *ssl, const char * session_id, const char * user_name){
+
     const char * message;
-    int res=_login_request( session_id, user_name, &message);
+    int res=create_login_request_message(session_id,user_name,&message);
+    SSL_write(ssl,message,strlen(message));
+
+    return res;
+}
+
+
+/* response challenge */
+int get_challenge(const char * buf,size_t buf_size, const char ** challenge_pp){
+    const char * session_id;
+    const char * user_name;   
+  
+    int res=get_with_va(buf,buf_size,3,
+        &session_id,
+        &user_name,
+        challenge_pp
+    );
+    free(session_id);
+    free(user_name);
+    return res;
+}
+
+int created_signed_challenge_message( const char * buf, size_t buf_size, const char * session_id, const char * user_name,EVP_PKEY * pkey, const char ** message_pp)
+{
+    const char * challenge;
+    int get_res=get_challenge(buf,buf_size,&challenge);
+    if (get_res){
+        fprintf(stderr,"parse challenge feedback gets problem\n");  // case 1: error
+        return get_res;
+    }
+    else{
+        // generate signayure 
+        const char * signature;                                     // case 2: error 
+        int sign_res=sign_message(challenge, &signature, pkey);
+        if (sign_res){
+            fprintf(stderr,"sign the challenge gets problem\n");
+            return sign_res;
+        }
+        else{
+            // get response_request                                 // case 3: success
+            * message_pp=fill_with_va(RESPONSE_REQUEST,3,session_id, user_name, signature);
+            return 0;
+        }
+    }
+}
+
+int response_challenge(SSL * ssl, const char * buf, size_t buf_size, const char * session_id, const char * user_name,EVP_PKEY * pkey){
+    const char * message;
+    int res=created_signed_challenge_message(buf, buf_size, session_id, user_name, pkey, &message);
     SSL_write(ssl,message,strlen(message));
     return res;
 }
 
 
-/* response request */
+/* get token from token feedback */
+int get_token(const char * buf, size_t buf_size, const char ** token_pp){
 
-challenge_feedback_t * parse_challenge_feedback(const char * buf, size_t buf_size){
+    const char * session_id;
+    const char * user_name;
+    const char * res;
 
-    challenge_feedback_t * feedback=_create_feedback(sizeof(challenge_feedback_t));
-    get_with_va(buf,buf_size,3,
-        &feedback->session_id,
-        &feedback->user_name,
-        &feedback->challenge
-    );
-    return feedback;
-}
-
-int check_challenge(challenge_feedback_t *client_challenge_feedback, const char * session_id, const char * user_name)
-{   
-    if (memcmp(client_challenge_feedback->session_id,session_id,strlen(session_id))){
-        return 1;
-    };
-    if (memcmp(client_challenge_feedback->user_name,user_name,strlen(user_name))){
-        return 1;
-    }
-    return 0;
-}
-
-int handle_challenge(const char * buf,size_t buf_size,
-    // const char * session_id, const char * user_name,
-     const char ** challenge_pp){
-    // parse_chanllege_feedback
-    challenge_feedback_t * parsed_feedback=parse_challenge_feedback(buf, buf_size);
-
-    // check challenge
-    // int check_res=check_challenge(parsed_feedback, session_id, user_name);
-    // if (check_res==0){
-        * challenge_pp=parsed_feedback->challenge;
-        return 0;
-    // }
-    // else{
-    //     * challenge_pp=NULL;
-    //     return 1;
-    // }
-}
-
-// int listen_challenge(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_challenge_pp){
-//     char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
-//     size_t buf_size;
-
-//     while (true){
-//         buf_size=SSL_read(ssl,buf,BUFFER_MAX_SIZE);
-//         char feedback_type=buf[0];
-
-//         if (feedback_type==CHALLENGE_FEEDBACK){
-//             if (handle_challenge(buf,buf_size,session_id,user_name,ret_challenge_pp)==0){ 
-//                 return 0;
-//             }
-//             else{
-//                 continue; // 其他人的反馈
-//             }
-//         }
-//         else  // 其他类型的消息
-//             continue; 
-//         }
-// };
-
-
-response_request_t * create_response_request(const char *session_id,const char * user_name, const char * signature){
-    
-    response_request_t * response_request=_create_request(sizeof(response_request_t));
-
-    response_request->session_id= session_id;
-    response_request->user_name= user_name;
-    response_request->response= signature;
-    return response_request;
-}
-
-const char * create_response_request_message(response_request_t * response_request){
-    
-    const char * message;
-    message=fill_with_va(RESPONSE_REQUEST,3,
-        response_request->session_id, 
-        (const unsigned char *) response_request->user_name, 
-        response_request->response);
-    return message;
-}
-
-int _response_challenge( const char * buf, size_t buf_size, const char * session_id, const char * user_name,EVP_PKEY * pkey, const char ** message_pp)
-{
-    const char * challenge;
-    int handle_res=handle_challenge(buf,buf_size,
-        // session_id,user_name,
-        &challenge);
-    
-    if (handle_res){
-        fprintf(stderr,"handle challenge feedback gets problem\n");
-        return 1;
-    }
-    
-    // sign challenge
-    const char * signature;    
-    int sign_res=sign_message(challenge, &signature, pkey);
-    
-    // get response_request
-
-    response_request_t * response_request=create_response_request(session_id,user_name,signature);
-
-    // get response_text
-    * message_pp=create_response_request_message(response_request);
-
-    return 0;
-}
-
-int response_challenge(SSL * ssl, const char * buf, size_t buf_size, const char * session_id, const char * user_name,EVP_PKEY * pkey){
-    const char * message;
-    int res=_response_challenge(buf, buf_size, session_id, user_name, pkey, &message);
-    SSL_write(ssl,message,strlen(message)+1);
-    return res;
-}
-/* response request */
-
-
-/* get token */
-token_feedback_t * parse_token_feedback(const char * buf, size_t buf_size){
-
-    token_feedback_t * token_feedback=_create_feedback(sizeof( token_feedback_t));
-
-    get_with_va(buf,buf_size,4,
-        &token_feedback->session_id, 
-        &token_feedback->user_name, 
-        &token_feedback->res, 
-        &token_feedback->token
+    int get_res=get_with_va(buf,buf_size,4,
+        & session_id,
+        & user_name,
+        & res,
+        token_pp
     );
 
-    return token_feedback;
+    free(session_id);
+    free(user_name);
+    free(res);
+
+    return get_res;
+
 }
 
-int check_token(token_feedback_t *token_feedback, const char * session_id, const char * user_name){
-     
-    if (memcmp(token_feedback->session_id,session_id,strlen(session_id))){
-        return 1;
-    }
-    if (memcmp(token_feedback->user_name,user_name,strlen(user_name))){
-        return 1;
-    }
-    return 0;
+
+/* log out request*/
+int create_quit_request_message(const char * session_id, const char * user_name, const char * token, const char ** message_pp){
+    *message_pp=fill_with_va(QUIT_REQUEST,3, session_id, user_name, token);
 }
-
-int handle_token(const char * buf, size_t buf_size,
-   const char * session_id, const char * user_name,  
-   const char ** token_pp){
-
-    token_feedback_t * token_feedback = parse_token_feedback(buf, buf_size);
-
-    int check_res=check_token(token_feedback, session_id, user_name);
-    if (check_res!=0){
-        fprintf(stderr,"token feedback check fails");
-        return 1;
-    }
-
-    *token_pp=token_feedback->token;
-    return 0;
-}
-
-const char * get_token(const char * buf, size_t buf_size){
-    const char * token=OPENSSL_zalloc(HEX_TOKEN_SIZE+1);
-    token_feedback_t * token_feedback = parse_token_feedback(buf, buf_size);
-    memcpy(token,token_feedback->token,strlen(token_feedback->token)+1);
-
-    free(token_feedback);
-    return token;
-}
-
-int quit_request(SSL *ssl, const char *session_id, const char * user_name,const char * new_data,const char * token)
+int quit_request(SSL *ssl, const char *session_id, const char * user_name,const char * token)
 {
-
+    const char * message;
+    int res=create_quit_request_message(session_id, user_name, token, &message);
+    SSL_write(ssl,message,strlen(message));
+    return 0;
 }
 
-// int listen_token(SSL *ssl ,const char * session_id, const char * user_name, const char ** ret_token_pp){
-
-//     char *buf=OPENSSL_zalloc( MESSAGE_BUFFER_MAX_SIZE);
-//     size_t buf_size;
-
-//     while (true){
-//         buf_size=SSL_read(ssl,buf,BUFFER_MAX_SIZE);
-//         char feedback_type=buf[0];
-
-//         if (feedback_type==TOKEN_FEEDBACK){
-            
-//             if (handle_token(buf,buf_size,session_id,user_name,ret_token_pp)==0){ 
-//                 return 0;
-//             }
-//             else{
-//                 continue; // 其他人的反馈
-//             }
-//         }
-//         else  // 其他类型的消息
-//             continue; 
-//         }
-
-
-// };
 # endif

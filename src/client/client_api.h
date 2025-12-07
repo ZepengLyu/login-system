@@ -111,7 +111,7 @@ int login_process(SSL *ssl,const char *session_id){
     const char * token;
    
 
-    enquire_data("请输入需要登陆的帐户 user_name",user_name);
+    enquire_data("请输入需要登陆的帐户 user_name\n",user_name);
     login_request(ssl,session_id,user_name);
     client_listen(ssl,session_id,user_name,CHALLENGE_FEEDBACK,&buf,&buf_size);
     review_res=review_feedback(buf,buf_size,&error_str);
@@ -129,61 +129,68 @@ int login_process(SSL *ssl,const char *session_id){
             printf("login fails: %s\n",error_str);
             return 1;
         }
-        else{                                       // case 3: success
-            token=get_token(buf,buf_size);
-            printf("login success\n");
-            int login_status=1;
-            while (login_status){
-                command_t client_operation=listen_client_command("请输入需要进行的操作，可运行的操作包括 query, upate, change_factor");   // enquire client operation: query, update, quit
-                switch (client_operation)
-                {   case CMD_QUERY:
-                        query_request(ssl,session_id,user_name,token);
-                        client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
+        else{                                       
+            const char * token;
+            int get_res=get_token(buf,buf_size,&token);
+            if (get_res){                           // case 3: parse token error 
+                printf("login fails: %s\n","extract token gets problem");
+                return get_res;
+            }
+            else{                                   // case 4: success
+                printf("login success\n");
+                int login_status=1;
+                while (login_status){
+                    command_t client_operation=listen_client_command("请输入需要进行的操作，可运行的操作包括 query, update, quit\n");   // enquire client operation: query, update, quit
+                    switch (client_operation)
+                    {   case CMD_QUERY:
+                            query_request(ssl,session_id,user_name,token);
+                            client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
+                            review_res=review_feedback(buf,buf_size,&error_str);
+                            if (review_res){
+                                printf("query fails: %s\n",error_str);
+                                continue;
+                            }
+                            else{
+                                printf("query result: %s\n",error_str);
+                                continue;
+                            }
+                            break;
+
+                        case CMD_UPDATE:
+                            enquire_data("请输入需要更新的数据\n",new_data);
+                            update_request(ssl,session_id,user_name,new_data,token);
+                            client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
+                            review_res=review_feedback(buf,buf_size,&error_str);
+                            if (review_res){
+                                printf("update fails: %s\n",error_str);
+                                continue;
+                            }
+                            else{
+                                printf("update success\n");
+                                continue;
+                            }
+                            break;
+
+                    case CMD_QUIT_LOGIN:
+                        quit_request(ssl,session_id,user_name,token);
+                        client_listen(ssl,session_id,user_name,QUIT_FEEDBACK,&buf,&buf_size);
                         review_res=review_feedback(buf,buf_size,&error_str);
                         if (review_res){
-                            printf("query fails: %s\n",error_str);
+                            printf("quit fail: %s\n",error_str);
                             continue;
                         }
                         else{
-                            printf("query result: %s\n",error_str);
+                            printf("quit success\n");
+                            login_status=0;
                             continue;
                         }
                         break;
-
-                    case CMD_UPDATE:
-                        enquire_data("请输入需要更新的数据",new_data);
-                        update_request(ssl,session_id,user_name,new_data,token);
-                        client_listen(ssl,session_id,user_name,RESULT_FEEDBACK,&buf,&buf_size);
-                        review_res=review_feedback(buf,buf_size,&error_str);
-                        if (review_res){
-                            printf("update fails: %s\n",error_str);
-                            continue;
-                        }
-                        else{
-                            printf("update success\n");
-                            continue;
-                        }
-                        break;
-
-                    // case CMD_QUIT_LOGIN:
-                    //     quit_request(ssl,session_id,user_name,new_data,token);
-                    //     client_listen(ssl,session_id,user_name,QUIT_FEEDBACK,&buf,&buf_size);
-                    //     review_res=review_feedback(buf,buf_size,&error_str);
-                    //     if (review_res){
-                    //         printf("quit fail: %s\n",error_str);
-                    //         continue;
-                    //     }
-                    //     else{
-                    //         printf("quit success\n");
-                    //         login_status=0;
-                    //         continue;
-                    //     }
-                    //     break;
                     default:
                         printf("unrecognized command\n");
                         continue;
                 }
             }
+        }
         }
     }
 
@@ -235,7 +242,7 @@ int client_request(SSL *ssl){
     while (true){
         
         // user command
-        command_t command_type=listen_client_command("请输入您要进行的操作，可允许的操作包括 register, login, change factor\n");
+        command_t command_type=listen_client_command("请输入您要进行的操作，可允许的操作包括 register, login, change_factor\n");
         switch(command_type){
             case CMD_REGISTER:             
                 register_process(ssl,session_id);
