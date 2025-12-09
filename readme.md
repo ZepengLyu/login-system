@@ -1,21 +1,29 @@
 # Preliminaries 
 
-# MYSQL 
+## MYSQL 
 server 使用的是 MySQL 数据库，需保证您的电脑已经安装
 
-## 为 root 设置密码 (由 homebrew 安装的 mysql，默认无密码)
+### 为 root 设置密码 (由 homebrew 安装的 mysql，默认无密码)
 ROOT_USER="root"
 ROOT_PASS="123456"
 mysqladmin -u $ROOT_USER password $ROOT_PASS 
 
-## 运行 create_database.sh 文件
+## OpenSSL
+使用的 OpenSSL 版本为 3.5，需保证您的电脑已经安装
 
-# 使用的 Openssl Curl 库位于
+# Running
+## 建立数据库
+运行 create_database.sh 文件 
+
 
 
 
 # limitations
-此项目暂时未设计服务器多线程运行，同时，也没有进行 fuzz 测试。这些功能预计在未来进行开发
+1. 目前服务器端未进行多线程开发
+2. 目前采用的是自定义应用层协议，预计在未来使用更通用的 http 协议
+3. 未进行 fuzz 测试
+4. 错误处理和内存协议还未进行完善
+5. session_id 目前由 client 生成，这并不符合通用做法。未来的版本将会由 server 生成，实际上，可以直接使用 session_id 作为 challenge 以减少通信量。
 
 Key exchange 算法则使用后量子混合算法 X25519mlkem768,
 
