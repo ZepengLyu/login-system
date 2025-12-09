@@ -1,3 +1,11 @@
+# Introduction
+
+Login protocol 为 Dilithium-based Challenge-Response protocol.
+
+证书使用 ML-DSA-44 证书。Key exchange 算法则使用后量子混合算法 X25519mlkem768,
+
+
+
 # Preliminaries 
 
 ## MYSQL 
@@ -24,7 +32,4 @@ mysqladmin -u $ROOT_USER password $ROOT_PASS
 3. 未进行 fuzz 测试
 4. 错误处理和内存协议还未进行完善
 5. session_id 目前由 client 生成，这并不符合通用做法。未来的版本将会由 server 生成，实际上，可以直接使用 session_id 作为 challenge 以减少通信量。
-
-Key exchange 算法则使用后量子混合算法 X25519mlkem768,
-
-证书使用 ML-DSA-44 证书
+6. 目前的证书仅使用 ML-DSA-44 签名，更好的方式应该是像 key exchange 算法 (X25519mlkem768) 那样使用混合算法。一种实现的方法是使用混合证书链。
